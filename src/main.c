@@ -63,6 +63,7 @@ void altitude_toggled(GtkCheckMenuItem* menu_item,gpointer data)
 {
 	if(gtk_check_menu_item_get_active(menu_item))plot.active_plots|=PLOT_ALTITUDE;
 	else plot.active_plots&=~PLOT_ALTITUDE;
+plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
@@ -70,6 +71,7 @@ void horizontal_velocity_toggled(GtkCheckMenuItem* menu_item,gpointer data)
 {
 	if(gtk_check_menu_item_get_active(menu_item))plot.active_plots|=PLOT_VEL_HORZ;
 	else plot.active_plots&=~PLOT_VEL_HORZ;
+plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
@@ -77,6 +79,15 @@ void vertical_velocity_toggled(GtkCheckMenuItem* menu_item,gpointer data)
 {
 	if(gtk_check_menu_item_get_active(menu_item))plot.active_plots|=PLOT_VEL_VERT;
 	else plot.active_plots&=~PLOT_VEL_VERT;
+plot_recalculate_range(&plot);
+gtk_widget_queue_draw(GTK_WIDGET(data));
+}
+
+void total_velocity_toggled(GtkCheckMenuItem* menu_item,gpointer data)
+{
+	if(gtk_check_menu_item_get_active(menu_item))plot.active_plots|=PLOT_VEL_TOTAL;
+	else plot.active_plots&=~PLOT_VEL_TOTAL;
+plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
@@ -84,6 +95,7 @@ void horizontal_acceleration_toggled(GtkCheckMenuItem* menu_item,gpointer data)
 {
 	if(gtk_check_menu_item_get_active(menu_item))plot.active_plots|=PLOT_ACC_HORZ;
 	else plot.active_plots&=~PLOT_ACC_HORZ;
+plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
@@ -91,6 +103,7 @@ void vertical_acceleration_toggled(GtkCheckMenuItem* menu_item,gpointer data)
 {
 	if(gtk_check_menu_item_get_active(menu_item))plot.active_plots|=PLOT_ACC_VERT;
 	else plot.active_plots&=~PLOT_ACC_VERT;
+plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
@@ -98,6 +111,7 @@ void lift_coefficient_toggled(GtkCheckMenuItem* menu_item,gpointer data)
 {
 	if(gtk_check_menu_item_get_active(menu_item))plot.active_plots|=PLOT_LIFT;
 	else plot.active_plots&=~PLOT_LIFT;
+plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
@@ -105,6 +119,7 @@ void drag_coefficient_toggled(GtkCheckMenuItem* menu_item,gpointer data)
 {
 	if(gtk_check_menu_item_get_active(menu_item))plot.active_plots|=PLOT_DRAG;
 	else plot.active_plots&=~PLOT_DRAG;
+plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
@@ -112,6 +127,7 @@ void lift_drag_ratio_toggled(GtkCheckMenuItem* menu_item,gpointer data)
 {
 	if(gtk_check_menu_item_get_active(menu_item))plot.active_plots|=PLOT_LD;
 	else plot.active_plots&=~PLOT_LD;
+plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
@@ -120,13 +136,18 @@ void glide_ratio_toggled(GtkCheckMenuItem* menu_item,gpointer data)
 {
 	if(gtk_check_menu_item_get_active(menu_item))plot.active_plots|=PLOT_GR;
 	else plot.active_plots&=~PLOT_GR;
+plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
+gboolean update_cursor(GtkWidget *widget,GdkEvent *event,gpointer user_data)
+{
+plot.cursor_x=event->motion.x;
+gtk_widget_queue_draw(GTK_WIDGET(widget));
+}
 
 int main(int argc,char **argv)
 {
-GtkWidget *window;
 GtkBuilder *builder = NULL;
 
 log.points=0;
@@ -150,9 +171,9 @@ builder=gtk_builder_new();
 	return 0;
 	}
 
-window=GTK_WIDGET (gtk_builder_get_object (builder,"window1"));
-
-
+GtkWidget* window=GTK_WIDGET(gtk_builder_get_object(builder,"window1"));
+GtkWidget* plot_area=GTK_WIDGET(gtk_builder_get_object(builder,"plot_area"));
+gtk_widget_add_events(plot_area,GDK_POINTER_MOTION_MASK);
 gtk_builder_connect_signals(builder,NULL);
 
 gtk_widget_show_all(window);

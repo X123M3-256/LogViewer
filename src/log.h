@@ -25,6 +25,7 @@ float log_get_time(log_t* log,int i);
 float log_get_altitude(log_t* log,int i);
 float log_get_vel_vert(log_t* log,int i);
 float log_get_vel_horz(log_t* log,int i);
+float log_get_vel_total(log_t* log,int i);
 float log_get_acc_vert(log_t* log,int i);
 float log_get_acc_horz(log_t* log,int i);
 float log_get_lift_coefficient(log_t* log,int i);

@@ -132,6 +132,11 @@ float log_get_vel_horz(log_t* log,int i)
 return sqrt(log->vel_n[i]*log->vel_n[i]+log->vel_e[i]*log->vel_e[i]);
 }
 
+float log_get_vel_total(log_t* log,int i)
+{
+return sqrt(log->vel_n[i]*log->vel_n[i]+log->vel_e[i]*log->vel_e[i]+log->vel_d[i]*log->vel_d[i]);
+}
+
 void log_get_acc_difference_points(log_t* log,int i,int* left,int* right)
 {
 int interval=10;
