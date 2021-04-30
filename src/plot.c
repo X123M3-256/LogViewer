@@ -58,7 +58,7 @@ float y_range=0.0;
 		for(int j=0;j<PLOT_NUM;j++)
 		{
 		//Exclude glide ratio in range calculation if anything else is plotted; it's problematic
-			if(j==PLOT_NUM&&plot->active_plots!=PLOT_GR)continue;
+			if(j==PLOT_NUM-1&&plot->active_plots!=PLOT_GR)continue;
 			if(plot->active_plots&(1<<j))y_range=max(y_range,plot_functions[j](plot->log,i)/plot->y_tick_spacing[plot_units[j]]);
 		}
 	}

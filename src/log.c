@@ -35,6 +35,8 @@ log->altitude=calloc(log->points,sizeof(float));
 log->vel_n=calloc(log->points,sizeof(float));
 log->vel_e=calloc(log->points,sizeof(float));
 log->vel_d=calloc(log->points,sizeof(float));
+log->wind_n=0.0;
+log->wind_e=0.0;
 //Read header line
 fgets(str,1024,file);
 fgets(str,1024,file);
@@ -53,13 +55,31 @@ int start_time=0;
 	//If the current timestamp is less than the current time, that means that midnight has passed. This will fail if the log lasts more than 24 hours, but that seems unlikely
 	log->time[i]=centiseconds>start_time?centiseconds-start_time:centiseconds+24*360000;
 	}
+		
 
+//Find takeoff time
+log->takeoff=0;
+//Ignore the first hundred points of the log, they seem to be unreliable
+		for(int i=100;i<log->points;i++)
+		{
+		//Look for where vertical velocity exceeds 15m/s - this should get us near the takeoff point
+			if(0.333333*(log->vel_d[i-1]+log->vel_d[i]+log->vel_d[i+1])<-2)
+			{
+			printf("Takeoff at %d\n",i);
+			//Search backwards for point where acceleration starts. Start out with fairly large interval to prevent random noise from terminating the search early, then use progressively smaller intervals to find exact moment of exit.
+				for(int j=5;j>0;j--)
+				{
+					while(i>100&&(log->vel_d[i]-log->vel_d[i-j])/(0.01*(log->time[i]-log->time[i-j]))<-0.1)i--;
+				}
+			log->takeoff=i;
+			break;
+			}
+		}
 
 //Find exit time
 int post_exit=0;
 log->exit=-1;
-//Ignore the first hundred points of the log, they seem to be unreliable
-		for(int i=100;i<log->points;i++)
+		for(int i=log->takeoff;i<log->points;i++)
 		{
 		//Look for where vertical velocity exceeds 15m/s - this should get us near the exit point
 			if(log->vel_d[i]>15)
@@ -68,7 +88,7 @@ log->exit=-1;
 			//Search backwards for point where acceleration starts. Start out with fairly large interval to prevent random noise from terminating the search early, then use progressively smaller intervals to find exact moment of exit.
 				for(int j=5;j>0;j--)
 				{
-					while(i>100&&(log->vel_d[i]-log->vel_d[i-j])/(0.01*(log->time[i]-log->time[i-j]))>2.0)i--;
+					while(i>log->takeoff&&(log->vel_d[i]-log->vel_d[i-j])/(0.01*(log->time[i]-log->time[i-j]))>2.0)i--;
 				}
 			log->exit=i;
 			break;
@@ -94,7 +114,7 @@ log->deployment=-1;
 		}
 	}else printf("Failed finding exit point\n");
 //Find landing time
-log->landing=-1;
+log->landing=log->points-1;
 	if(log->deployment!=-1)
 	{
 		for(int i=log->points-1;i>log->deployment;i--)
@@ -109,6 +129,16 @@ log->landing=-1;
 			}
 		}
 	}else printf("Failed finding deployment point\n");
+/*
+	for(int i=log->takeoff;i<log->landing;i++)
+	{
+	float t=0.01*(log->time[i]-log->time[log->takeoff]);
+	log->altitude[i]=t;
+	float airspeed=4.0+t/200.00;
+	log->vel_n[i]=-2.0+4.0*(log->altitude[i]/1000.0)+airspeed*cos(0.02*t);
+	log->vel_e[i]=-2.0+4.0*(log->altitude[i]/1000.0)+airspeed*sin(0.02*t);
+	}
+*/
 return 0;
 }
 
@@ -129,7 +159,7 @@ return log->vel_d[i];
 
 float log_get_vel_horz(log_t* log,int i)
 {
-return sqrt(log->vel_n[i]*log->vel_n[i]+log->vel_e[i]*log->vel_e[i]);
+return sqrt((log->vel_n[i]-log->wind_n)*(log->vel_n[i]-log->wind_n)+(log->vel_e[i]-log->wind_e)*(log->vel_e[i]-log->wind_e));
 }
 
 float log_get_vel_total(log_t* log,int i)
@@ -185,8 +215,8 @@ return fabs(log_get_vel_horz(log,right)-log_get_vel_horz(log,left))/(0.01*(log->
 
 float log_get_drag_lift_coefficient(log_t* log,int i,float* drag,float* lift)
 {
-float vn=log->vel_n[i];
-float ve=log->vel_e[i];
+float vn=log->vel_n[i]-log->wind_n;
+float ve=log->vel_e[i]-log->wind_e;
 float vd=log->vel_d[i];
 //Total velocity
 float v_mag=sqrt(vn*vn+ve*ve+vd*vd);
@@ -213,7 +243,7 @@ ad-=acc_l*nd;
 float acc_p=sqrt(an*an+ae*ae+ad*ad);
 
 float mass=80;
-float A=0.6;
+float A=0.5;
 
 float pressure=101325*pow(1-2.25569e-5*log->altitude[i],5.25616);
 float temp=288.15-0.0065*log->altitude[i];
@@ -248,3 +278,9 @@ float log_get_glide_ratio(log_t* log,int i)
 {
 return log_get_vel_horz(log,i)/log_get_vel_vert(log,i);
 }
+
+float log_get_heading(log_t* log,int i)
+{
+return M_PI+atan2(log->vel_e[i],log->vel_n[i]);
+}
+

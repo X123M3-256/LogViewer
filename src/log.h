@@ -11,6 +11,9 @@ float* altitude;
 float* vel_n;
 float* vel_e;
 float* vel_d;
+float wind_n;
+float wind_e;
+int takeoff;
 int exit;
 int deployment;
 int landing;
@@ -32,6 +35,7 @@ float log_get_lift_coefficient(log_t* log,int i);
 float log_get_drag_coefficient(log_t* log,int i);
 float log_get_lift_drag_ratio(log_t* log,int i);
 float log_get_glide_ratio(log_t* log,int i);
+float log_get_heading(log_t* log,int i);
 
 
 #endif
