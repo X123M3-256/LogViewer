@@ -57,7 +57,8 @@ width=gtk_widget_get_allocated_width(widget);
 height=gtk_widget_get_allocated_height(widget);
 gtk_render_background(context,cr,0,0,width,height);
 
-plot_draw(&plot,cr,width,height);
+plot_set_size(&plot,width,height);
+plot_draw(&plot,cr);
 return FALSE;
 }
 
@@ -141,9 +142,36 @@ plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
-gboolean update_cursor(GtkWidget *widget,GdkEvent *event,gpointer user_data)
+
+int plot_drag_active=0;
+
+gboolean plot_motion(GtkWidget *widget,GdkEvent *event,gpointer user_data)
 {
-plot.cursor_x=event->motion.x;
+float pos=plot.x_tick_spacing*(event->motion.x-plot.left_margin)/plot.x_scale;
+	if(pos<0.0)pos=0.0;
+	if(pos>plot.x_range*plot.x_tick_spacing)pos=plot.x_range*plot.x_tick_spacing;
+
+	if(plot_drag_active==0)
+	{
+	plot.cursor_x=pos;
+	}
+	else
+	{
+	plot.cursor_range=pos-plot.cursor_x;
+	}
+gtk_widget_queue_draw(GTK_WIDGET(widget));
+}
+
+gboolean plot_button_press(GtkWidget *widget,GdkEvent *event,gpointer user_data)
+{
+plot_drag_active=1;
+gtk_widget_queue_draw(GTK_WIDGET(widget));
+}
+
+gboolean plot_button_release(GtkWidget *widget,GdkEvent *event,gpointer user_data)
+{
+plot_drag_active=0;
+plot.cursor_range=-1.0;
 gtk_widget_queue_draw(GTK_WIDGET(widget));
 }
 
@@ -586,7 +614,7 @@ return 0;
 
 GtkWidget* window=GTK_WIDGET(gtk_builder_get_object(builder,"window1"));
 GtkWidget* plot_area=GTK_WIDGET(gtk_builder_get_object(builder,"plot_area"));
-gtk_widget_add_events(plot_area,GDK_POINTER_MOTION_MASK);
+gtk_widget_add_events(plot_area,GDK_POINTER_MOTION_MASK|GDK_BUTTON_PRESS_MASK|GDK_BUTTON_RELEASE_MASK);
 gtk_builder_connect_signals(builder,NULL);
 
 gtk_widget_show_all(window);
