@@ -4,6 +4,8 @@
   <requires lib="gtk+" version="3.24"/>
   <object class="GtkWindow" id="window1">
     <property name="can-focus">False</property>
+    <property name="default-width">640</property>
+    <property name="default-height">480</property>
     <signal name="delete-event" handler="window_delete" swapped="no"/>
     <child>
       <object class="GtkBox">
@@ -207,6 +209,7 @@
                         <property name="use-underline">True</property>
                         <property name="active">True</property>
                         <property name="draw-as-radio">True</property>
+                        <signal name="activate" handler="axis_time" object="plot_area" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -217,6 +220,7 @@
                         <property name="use-underline">True</property>
                         <property name="draw-as-radio">True</property>
                         <property name="group">radiomenuitem1</property>
+                        <signal name="activate" handler="axis_distance" object="plot_area" swapped="no"/>
                       </object>
                     </child>
                   </object>

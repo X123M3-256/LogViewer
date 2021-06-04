@@ -5,6 +5,7 @@ typedef struct
 {
 int points;
 float* time;
+float* distance;
 float* latitude;
 float* longitude;
 float* altitude;
@@ -25,6 +26,7 @@ int log_parse(const char* filename,log_t* log);
 
 
 float log_get_time(log_t* log,int i);
+float log_get_distance(log_t* log,int i);
 float log_get_altitude(log_t* log,int i);
 float log_get_vel_vert(log_t* log,int i);
 float log_get_vel_horz(log_t* log,int i);

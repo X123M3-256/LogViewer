@@ -27,9 +27,9 @@ typedef struct
 {
 int width;
 int height;
+int x_axis_variable;
 float x_scale;
 float y_scale;
-
 int left_margin;
 int right_margin;
 int top_margin;

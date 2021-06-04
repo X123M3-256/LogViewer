@@ -31,6 +31,7 @@ fseek(file,0,SEEK_SET);
 log->time=calloc(log->points,sizeof(int));
 log->latitude=calloc(log->points,sizeof(float));
 log->longitude=calloc(log->points,sizeof(float));
+log->distance=calloc(log->points,sizeof(float));
 log->altitude=calloc(log->points,sizeof(float));
 log->vel_n=calloc(log->points,sizeof(float));
 log->vel_e=calloc(log->points,sizeof(float));
@@ -54,6 +55,17 @@ int start_time=0;
 		if(i==0)start_time=centiseconds;
 	//If the current timestamp is less than the current time, that means that midnight has passed. This will fail if the log lasts more than 24 hours, but that seems unlikely
 	log->time[i]=centiseconds>start_time?centiseconds-start_time:centiseconds+24*360000;
+	}
+
+log->distance[0]=0.0;
+	for(int i=1;i<log->points;i++)
+	{
+	float lat=0.5*M_PI*(log->latitude[i]+log->latitude[i-1])/180.0;
+	float k1=111132.09-566.05*cos(2*lat)+1.2*cos(4*lat);
+	float k2=111415.13*cos(lat)-94.55*cos(3*lat)+0.12*cos(5*lat);
+	float dx=k1*(log->latitude[i]-log->latitude[i-1]);
+	float dy=k2*(log->longitude[i]-log->longitude[i-1]);
+	log->distance[i]=log->distance[i-1]+sqrt(dx*dx+dy*dy);
 	}
 		
 
@@ -145,6 +157,11 @@ return 0;
 float log_get_time(log_t* log,int i)
 {
 return 0.01*(log->time[i]-log->time[log->exit]);
+}
+
+float log_get_distance(log_t* log,int i)
+{
+return log->distance[i]-log->distance[log->exit];
 }
 
 float log_get_altitude(log_t* log,int i)
