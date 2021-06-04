@@ -601,6 +601,11 @@ if(argc>1)
 	}
 plot_new(&plot,&cur_log);
 }
+else 
+{
+printf("Usage: LogViewer <filename>\n");
+return 1;
+}
 
 gtk_init(&argc,&argv);
 
@@ -613,6 +618,7 @@ return 0;
 }
 
 GtkWidget* window=GTK_WIDGET(gtk_builder_get_object(builder,"window1"));
+gtk_window_fullscreen(window);
 GtkWidget* plot_area=GTK_WIDGET(gtk_builder_get_object(builder,"plot_area"));
 gtk_widget_add_events(plot_area,GDK_POINTER_MOTION_MASK|GDK_BUTTON_PRESS_MASK|GDK_BUTTON_RELEASE_MASK);
 gtk_builder_connect_signals(builder,NULL);
