@@ -12,11 +12,14 @@ const char* units[5]={"m","m/s","m/s\u00B2","s",""};
 const char* unit_alternate[5]={"ft","mph","G",NULL,NULL};
 float unit_alternate_scale[5]={3.28084,2.236936,0.101936799185,0,0};
 
-float (*plot_functions[])(log_t*,int)={log_get_time,log_get_altitude,log_get_altitude,log_get_vel_horz,log_get_vel_vert,log_get_vel_total,log_get_acc_horz,log_get_acc_vert,log_get_lift_coefficient,log_get_drag_coefficient,log_get_lift_drag_ratio,log_get_glide_ratio};
+float (*plot_functions[])(log_t*,int)={log_get_time,log_get_altitude,log_get_distance,log_get_vel_horz,log_get_vel_vert,log_get_vel_total,log_get_acc_horz,log_get_acc_vert,log_get_lift_coefficient,log_get_drag_coefficient,log_get_lift_drag_ratio,log_get_glide_ratio};
 float plot_colors[PLOT_NUM][3]={{1,1,1},{0,0,0},{0,0,0},{1,0,0},{0,1,0},{1,1,0},{1,0,1},{0.5,0.5,0},{0,0.5,0},{0.5,0,0},{0,0,1},{0,0,0.5}};
 int plot_units[PLOT_NUM]={3,0,0,1,1,1,2,2,4,4,4,4};
 const char* plot_names[PLOT_NUM]={"Time","Altitude","Distance","Horizontal Velocity","Vertical Velocity","Total Velocity","Horizontal Acceleration","Vertical Acceleration","Lift Coefficient","Drag Coefficient","L/D Ratio","Glide Ratio"};
 const char* plot_range_names[PLOT_NUM]={"Time (Difference)","Altitude (Difference)","Distance (Difference)","Horizontal Velocity (Average)","Vertical Velocity (Average)","Total Velocity (Average)","Horizontal Acceleration (Average)","Vertical Acceleration (Average)","Lift Coefficient (Average)","Drag Coefficient (Average)","L/D Ratio (Average)","Glide Ratio (Average)"};
+
+
+
 
 plot_t plot_new(plot_t* plot,log_t* log)
 {
@@ -26,13 +29,7 @@ plot->right_margin=20;
 plot->top_margin=10;
 plot->bottom_margin=20;
 
-plot->x_tick_spacing=5;
-plot->y_tick_spacing[0]=500;
-plot->y_tick_spacing[1]=10;
-plot->y_tick_spacing[2]=2;
-plot->y_tick_spacing[3]=10;
-plot->y_tick_spacing[4]=0.2;
-
+plot->x_axis_variable=0;
 
 plot->start=log->exit!=-1?log->exit:0;
 plot->end=log->landing!=-1?log->deployment:plot->log->points-1;
@@ -42,8 +39,7 @@ plot->active_plots=PLOT_ALTITUDE|PLOT_VEL_HORZ|PLOT_VEL_VERT;
 plot->cursor_x=0.0;
 plot->cursor_range=-1.0;
 
-
-plot_recalculate_range(plot);
+plot_set_size(plot,640,480);
 
 //TODO Calculate margin size
 }
@@ -52,15 +48,50 @@ float tick_length=5.0;
 float tick_label_spacing=2.0;
 
 
+//TODO take account of actual range in calculating this
+float calculate_tick_spacing(int ticks,float range)
+{
+float spacing_candidates[]={0.1,0.2,0.25,0.5,1.0,2.0,2.5,5.0,10.0,20.0,25.0,50.0,100.0,200.0,250.0,500.0,1000.0,2000.0,2500.0,5000.0,10000.0};
+int i=0;
+	for(;i<21;i++)
+	{
+		if(ticks*spacing_candidates[i]>range)break;
+	}
+return spacing_candidates[i];
+}
+
+//TODO improve this
 void plot_recalculate_range(plot_t* plot)
 {
-//Calculate x data range
-plot->x_start=0.0;
-plot->x_range=log_get_time(plot->log,plot->end)/plot->x_tick_spacing;
+int usable_width=plot->width-plot->left_margin-plot->right_margin;
+int usable_height=plot->height-plot->top_margin-plot->bottom_margin;
 
-//Calculate y data range
-float y_range=0.0;
+float target=100.0;
+int x_ticks=(int)((usable_width/target)+0.5);
+int y_ticks=(int)((usable_height/target)+0.5);
+
+//Calculate x tick spacing and data range
+plot->x_start=0.0;
+plot->x_tick_spacing=calculate_tick_spacing(x_ticks,plot_functions[plot->x_axis_variable](plot->log,plot->end));
+plot->x_range=plot_functions[plot->x_axis_variable](plot->log,plot->end)/plot->x_tick_spacing;
+
+//Calculate y tick spacing and data range
+float y_ranges[5]={0,0,0,0,0};
 	for(int i=plot->start;i<plot->end;i++)
+	{
+		for(int j=0;j<PLOT_NUM;j++)
+		{
+		//Exclude glide ratio in range calculation if anything else is plotted; it's problematic
+			if(j==PLOT_NUM-1&&plot->active_plots!=PLOT_GR)continue;
+			if(plot->active_plots&(1<<j))y_ranges[plot_units[j]]=max(y_ranges[plot_units[j]],plot_functions[j](plot->log,i));
+		}
+	}
+	for(int i=0;i<5;i++)
+	{
+	plot->y_tick_spacing[i]=calculate_tick_spacing(y_ticks,y_ranges[i]);
+	}
+float y_range=0.0;
+	for(int i=plot->start;i<plot->end;i++)//TODO avoid this loop
 	{
 		for(int j=0;j<PLOT_NUM;j++)
 		{
@@ -69,9 +100,12 @@ float y_range=0.0;
 			if(plot->active_plots&(1<<j))y_range=max(y_range,plot_functions[j](plot->log,i)/plot->y_tick_spacing[plot_units[j]]);
 		}
 	}
+
 plot->y_start=0.0;
 plot->y_range=ceil(y_range);
+
 }
+
 
 void plot_set_size(plot_t* plot,int width,int height)
 {
@@ -79,7 +113,9 @@ plot->width=width;
 plot->height=height;
 plot->x_scale=(width-plot->left_margin-plot->right_margin)/(float)plot->x_range;
 plot->y_scale=(height-plot->top_margin-plot->bottom_margin)/(float)plot->y_range;
+plot_recalculate_range(plot);
 }
+
 
 
 
@@ -123,7 +159,7 @@ int unit_precision[]={0,0,0,0,1};
 
 }
 
-float log_get_point_at_time(log_t* log,float x,int* left,int* right,float* u)
+float log_get_point_at_x(log_t* log,float (*xaxis)(log_t*,int),float x,int* left,int* right,float* u)
 {
 ///Find nearest two points by binary search, then interpolate
 int l=0;
@@ -131,13 +167,13 @@ int r=log->points-1;
 int mid=(l+r)/2;
 	while(mid!=l&&mid!=r)
 	{
-		if(log_get_time(log,mid)<x)l=mid;
+		if(xaxis(log,mid)<x)l=mid;
 		else r=mid;
 	mid=(l+r)/2;
 	}
 *left=l;
 *right=r;
-*u=(x-log_get_time(log,l))/(log_get_time(log,r)-log_get_time(log,l));
+*u=(x-xaxis(log,l))/(xaxis(log,r)-xaxis(log,l));
 }
 
 //TODO move this to log.c
@@ -147,7 +183,7 @@ void draw_cursor(plot_t* plot,cairo_t* cr,float x,float* values)
 //Get values of all quantities at cursor point
 int l,r;
 float u;
-log_get_point_at_time(plot->log,x,&l,&r,&u);
+log_get_point_at_x(plot->log,plot_functions[plot->x_axis_variable],x,&l,&r,&u);
 	for(int i=0;i<PLOT_NUM;i++)
 	{
 	values[i]=plot_functions[i](plot->log,l)*(1-u)+u*plot_functions[i](plot->log,r);
@@ -332,7 +368,7 @@ cairo_set_source_rgba(cr,0.0,0.0,0.0,1.0);
 	cairo_text_extents(cr,label,&extents);	
 	
 	cairo_move_to(cr,(int)(-extents.x_bearing-extents.width/2),(int)(-extents.y_bearing+tick_length+tick_label_spacing));
-	sprintf(label,"%.0fs",i*plot->x_tick_spacing);
+	sprintf(label,"%.0f%s",i*plot->x_tick_spacing,units[plot_units[plot->x_axis_variable]]);
 	cairo_show_text(cr,label);
 	cairo_fill(cr);	
 	cairo_restore(cr);
@@ -355,7 +391,7 @@ cairo_set_source_rgba(cr,0.0,0.0,0.0,1.0);
 //Plot data
 	for(int i=0;i<PLOT_NUM;i++)
 	{
-	if(plot->active_plots&(1<<i))plot_data(plot,cr,log_get_time,plot_functions[i],plot->y_tick_spacing[plot_units[i]],plot_colors[i][0],plot_colors[i][1],plot_colors[i][2]);
+	if(plot->active_plots&(1<<i))plot_data(plot,cr,plot_functions[plot->x_axis_variable],plot_functions[i],plot->y_tick_spacing[plot_units[i]],plot_colors[i][0],plot_colors[i][1],plot_colors[i][2]);
 	}
 
 float values[PLOT_NUM];
@@ -368,20 +404,24 @@ draw_cursor(plot,cr,plot->cursor_x,values);
 	float values2[PLOT_NUM];
 	draw_cursor(plot,cr,plot->cursor_x+plot->cursor_range,values2);
 	float display_values[PLOT_NUM];
+
+	//Calculate start and end time
+	int l1,r1,l2,r2;
+	float u1,u2;
+	log_get_point_at_x(plot->log,plot_functions[plot->x_axis_variable],plot->cursor_x,&l1,&r1,&u1);
+	log_get_point_at_x(plot->log,plot_functions[plot->x_axis_variable],plot->cursor_x+plot->cursor_range,&l2,&r2,&u2);
+	float start_time=(1.0-u1)*log_get_time(plot->log,l1)+u1*log_get_time(plot->log,r1);
+	float end_time=(1.0-u2)*log_get_time(plot->log,l2)+u2*log_get_time(plot->log,r2);
+
 	//Position and distance display difference, not average
 	display_values[0]=values2[0]-values[0];
 	display_values[1]=values[1]-values2[1];
 	display_values[2]=values2[2]-values[2];
 	//For horizontal and vertical acceleration, use finite difference over entire range
-	display_values[6]=(values[3]-values2[3])/plot->cursor_range;	
-	display_values[7]=(values[4]-values2[4])/plot->cursor_range;
+	display_values[6]=(values[3]-values2[3])/(end_time-start_time);	
+	display_values[7]=(values[4]-values2[4])/(end_time-start_time);
 	
 	//For other quantities use the trapezium rule to compute the average
-	int l1,r1,l2,r2;
-	float u1,u2;
-	log_get_point_at_time(plot->log,plot->cursor_x,&l1,&r1,&u1);
-	log_get_point_at_time(plot->log,plot->cursor_x+plot->cursor_range,&l2,&r2,&u2);
-	
 	int averaged_quantities[]={3,4,5,8,9};	
 		for(int i=0;i<5;i++)
 		{
@@ -392,13 +432,13 @@ draw_cursor(plot,cr,plot->cursor_x,values);
 			}
 			else
 			{
-			display_values[index]=0.5*(values[index]+plot_functions[index](plot->log,r1))*(log_get_time(plot->log,r1)-plot->cursor_x);
-			display_values[index]+=0.5*(values2[index]+plot_functions[index](plot->log,l2))*(plot->cursor_x+plot->cursor_range-log_get_time(plot->log,l2));
+			display_values[index]=0.5*(values[index]+plot_functions[index](plot->log,r1))*(log_get_time(plot->log,r1)-start_time);
+			display_values[index]+=0.5*(values2[index]+plot_functions[index](plot->log,l2))*(end_time-log_get_time(plot->log,l2));
 				for(int j=r1;j<l2;j++)
 				{
 				display_values[index]+=0.5*(plot_functions[index](plot->log,j)+plot_functions[index](plot->log,j+1))*(log_get_time(plot->log,j+1)-log_get_time(plot->log,j));
 				}
-			display_values[index]/=plot->cursor_range;
+			display_values[index]/=end_time-start_time;
 			}
 		}
 	//Averages of L/D and glide ratios calculated from averaged L/D coefficients and velocities

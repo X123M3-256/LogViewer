@@ -57,7 +57,7 @@ width=gtk_widget_get_allocated_width(widget);
 height=gtk_widget_get_allocated_height(widget);
 gtk_render_background(context,cr,0,0,width,height);
 
-plot_set_size(&plot,width,height);
+plot_set_size(&plot,width,height);//TODO only call when necessary
 plot_draw(&plot,cr);
 return FALSE;
 }
@@ -66,6 +66,14 @@ void altitude_toggled(GtkCheckMenuItem* menu_item,gpointer data)
 {
 	if(gtk_check_menu_item_get_active(menu_item))plot.active_plots|=PLOT_ALTITUDE;
 	else plot.active_plots&=~PLOT_ALTITUDE;
+plot_recalculate_range(&plot);
+gtk_widget_queue_draw(GTK_WIDGET(data));
+}
+
+void distance_toggled(GtkCheckMenuItem* menu_item,gpointer data)
+{
+	if(gtk_check_menu_item_get_active(menu_item))plot.active_plots|=PLOT_DISTANCE;
+	else plot.active_plots&=~PLOT_DISTANCE;
 plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
@@ -142,6 +150,19 @@ plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
+void axis_time(GtkMenuItem* menu_item,gpointer data)
+{
+plot.x_axis_variable=0;
+plot_recalculate_range(&plot);
+gtk_widget_queue_draw(GTK_WIDGET(data));
+}
+
+void axis_distance(GtkMenuItem* menu_item,gpointer data)
+{
+plot.x_axis_variable=2;
+plot_recalculate_range(&plot);
+gtk_widget_queue_draw(GTK_WIDGET(data));
+}
 
 int plot_drag_active=0;
 
@@ -359,7 +380,7 @@ cairo_stroke(cr);
 		cairo_set_source_rgba(cr,1.0,0.0,0.0,1.0);
 		for(int i=0;i<timeline.intervals;i++)
 		{	
-		cairo_arc(cr,width/2,height/2,scale*airspeeds[i],0,2*M_PI);
+		cairo_arc(cr,scale*cur_log.wind_e+width/2,scale*cur_log.wind_n+height/2,scale*airspeeds[i],0,2*M_PI);
 		cairo_stroke(cr);
 		}
 		
@@ -368,8 +389,8 @@ cairo_stroke(cr);
 		for(int j=0;j<timeline.intervals;j++)
 		for(int i=timeline.interval_points[2*j];i<timeline.interval_points[2*j+1];i++)
 		{
-		int x=scale*(cur_log.vel_e[i]-cur_log.wind_e)+width/2;
-		int y=scale*(cur_log.vel_n[i]-cur_log.wind_n)+height/2;
+		int x=scale*cur_log.vel_e[i]+width/2;
+		int y=scale*cur_log.vel_n[i]+height/2;
 		cairo_move_to(cr,x-2,y+0.5);
 		cairo_line_to(cr,x+3,y+0.5);
 		cairo_move_to(cr,x+0.5,y-2);
