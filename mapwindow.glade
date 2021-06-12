@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.38.2 -->
+<interface>
+  <requires lib="gtk+" version="3.24"/>
+  <object class="GtkWindow" id="window1">
+    <property name="can-focus">False</property>
+    <child>
+      <object class="GtkDrawingArea" id="map">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <signal name="button-press-event" handler="map_button_press" swapped="no"/>
+        <signal name="button-release-event" handler="map_button_release" swapped="no"/>
+        <signal name="draw" handler="map_draw" swapped="no"/>
+        <signal name="motion-notify-event" handler="map_motion" swapped="no"/>
+        <signal name="scroll-event" handler="map_scroll" swapped="no"/>
+      </object>
+    </child>
+  </object>
+</interface>

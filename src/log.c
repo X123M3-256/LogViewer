@@ -232,7 +232,7 @@ log_get_acc_difference_points(log,i,&left,&right);
 return fabs(log_get_vel_horz(log,right)-log_get_vel_horz(log,left))/(0.01*(log->time[right]-log->time[left]));
 }
 
-float log_get_drag_lift_coefficient(log_t* log,int i,float* drag,float* lift)
+void log_get_drag_lift_coefficient(log_t* log,int i,float* drag,float* lift)
 {
 float vn=log->vel_n[i]-log->wind_n;
 float ve=log->vel_e[i]-log->wind_e;
