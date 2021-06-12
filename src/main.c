@@ -607,6 +607,79 @@ gtk_widget_queue_draw(GTK_WIDGET(widget));
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
+void open_polar_window(GtkWidget *widget,gpointer data)
+{
+//g_return_if_fail(data != NULL);
+
+GtkBuilder* builder=gtk_builder_new_from_file("polarwindow.glade");
+GtkWidget* window=GTK_WIDGET(gtk_builder_get_object(builder,"window1"));
+GtkWidget* timeline_plot=GTK_WIDGET(gtk_builder_get_object(builder,"timeline"));
+gtk_widget_add_events(timeline_plot,GDK_POINTER_MOTION_MASK|GDK_BUTTON_PRESS_MASK|GDK_BUTTON_RELEASE_MASK);
+gtk_builder_connect_signals(builder,NULL);
+
+timeline.start=cur_log.exit;	
+timeline.end=cur_log.deployment;
+
+
+gtk_widget_show_all(window);
+g_object_unref(G_OBJECT(builder));
+}
+
+gboolean draw_polar_plot(GtkWidget *widget,cairo_t *cr,gpointer data)
+{
+guint width, height;
+GdkRGBA color;
+GtkStyleContext *context;
+
+context=gtk_widget_get_style_context(widget);
+width=gtk_widget_get_allocated_width(widget);
+height=gtk_widget_get_allocated_height(widget);
+gtk_render_background(context,cr,0,0,width,height);
+
+cairo_set_line_width(cr,1);
+cairo_move_to(cr,0,height/2+0.5);
+cairo_line_to(cr,width,height/2+0.5);
+cairo_move_to(cr,width/4+0.5,0);
+cairo_line_to(cr,width/4+0.5,height);
+cairo_stroke(cr);
+
+	if(cur_log.points>0)
+	{
+	//Get bounds
+	float x_range=1.0;
+	float y_range=1.0;
+		//for(int i=cur_log.takeoff;i<=cur_log.landing;i++)
+		//{
+		//x_range=fmax(x_range,fabs(cur_log.vel_e[i]));
+		//y_range=fmax(y_range,fabs(cur_log.vel_n[i]));
+		//}
+
+	float scale=0.45*fmin(width/x_range,height/y_range);
+
+	//Draw velocity points
+	cairo_set_source_rgba(cr,0.5,0.5,0.5,1.0);
+		for(int j=0;j<timeline.intervals;j++)
+		for(int i=timeline.interval_points[2*j];i<timeline.interval_points[2*j+1];i++)
+		{
+		float drag,lift;
+		log_get_drag_lift_coefficient(&cur_log,i,&drag,&lift);
+		int x=scale*drag+width/4;
+		int y=-scale*lift+height/2;
+		cairo_move_to(cr,x-2,y+0.5);
+		cairo_line_to(cr,x+3,y+0.5);
+		cairo_move_to(cr,x+0.5,y-2);
+		cairo_line_to(cr,x+0.5,y+3);
+		cairo_stroke(cr);
+		}
+
+
+	}
+
+
+
+return FALSE;
+}
+
 
 
 
