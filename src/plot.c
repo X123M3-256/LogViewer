@@ -159,31 +159,13 @@ int unit_precision[]={0,0,0,0,1};
 
 }
 
-float log_get_point_at_x(log_t* log,float (*xaxis)(log_t*,int),float x,int* left,int* right,float* u)
-{
-///Find nearest two points by binary search, then interpolate
-int l=0;
-int r=log->points-1;
-int mid=(l+r)/2;
-	while(mid!=l&&mid!=r)
-	{
-		if(xaxis(log,mid)<x)l=mid;
-		else r=mid;
-	mid=(l+r)/2;
-	}
-*left=l;
-*right=r;
-*u=(x-xaxis(log,l))/(xaxis(log,r)-xaxis(log,l));
-}
-
-//TODO move this to log.c
 
 void draw_cursor(plot_t* plot,cairo_t* cr,float x,float* values)
 {
 //Get values of all quantities at cursor point
 int l,r;
 float u;
-log_get_point_at_x(plot->log,plot_functions[plot->x_axis_variable],x,&l,&r,&u);
+log_get_point_by_value(plot->log,plot_functions[plot->x_axis_variable],x,&l,&r,&u);
 	for(int i=0;i<PLOT_NUM;i++)
 	{
 	values[i]=plot_functions[i](plot->log,l)*(1-u)+u*plot_functions[i](plot->log,r);
@@ -408,8 +390,8 @@ draw_cursor(plot,cr,plot->cursor_x,values);
 	//Calculate start and end time
 	int l1,r1,l2,r2;
 	float u1,u2;
-	log_get_point_at_x(plot->log,plot_functions[plot->x_axis_variable],plot->cursor_x,&l1,&r1,&u1);
-	log_get_point_at_x(plot->log,plot_functions[plot->x_axis_variable],plot->cursor_x+plot->cursor_range,&l2,&r2,&u2);
+	log_get_point_by_value(plot->log,plot_functions[plot->x_axis_variable],plot->cursor_x,&l1,&r1,&u1);
+	log_get_point_by_value(plot->log,plot_functions[plot->x_axis_variable],plot->cursor_x+plot->cursor_range,&l2,&r2,&u2);
 	float start_time=(1.0-u1)*log_get_time(plot->log,l1)+u1*log_get_time(plot->log,r1);
 	float end_time=(1.0-u2)*log_get_time(plot->log,l2)+u2*log_get_time(plot->log,r2);
 

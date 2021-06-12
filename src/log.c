@@ -13,6 +13,17 @@ free(log->vel_e);
 free(log->vel_d);
 }
 
+float get_distance(float lat1,float lon1,float lat2,float lon2)
+{
+float lat=0.5*M_PI*(lat1+lat2)/180.0;
+float k1=111132.09-566.05*cos(2*lat)+1.2*cos(4*lat);
+float k2=111415.13*cos(lat)-94.55*cos(3*lat)+0.12*cos(5*lat);
+float dx=k1*(lat1-lat2);
+float dy=k2*(lon1-lon2);
+return sqrt(dx*dx+dy*dy);
+}
+
+
 int log_parse(const char* filename,log_t* log)
 {
 FILE* file=fopen(filename,"r");
@@ -60,12 +71,7 @@ int start_time=0;
 log->distance[0]=0.0;
 	for(int i=1;i<log->points;i++)
 	{
-	float lat=0.5*M_PI*(log->latitude[i]+log->latitude[i-1])/180.0;
-	float k1=111132.09-566.05*cos(2*lat)+1.2*cos(4*lat);
-	float k2=111415.13*cos(lat)-94.55*cos(3*lat)+0.12*cos(5*lat);
-	float dx=k1*(log->latitude[i]-log->latitude[i-1]);
-	float dy=k2*(log->longitude[i]-log->longitude[i-1]);
-	log->distance[i]=log->distance[i-1]+sqrt(dx*dx+dy*dy);
+	log->distance[i]=log->distance[i-1]+get_distance(log->latitude[i],log->longitude[i],log->latitude[i-1],log->longitude[i-1]);
 	}
 		
 
@@ -186,13 +192,9 @@ return sqrt(log->vel_n[i]*log->vel_n[i]+log->vel_e[i]*log->vel_e[i]+log->vel_d[i
 
 void log_get_acc_difference_points(log_t* log,int i,int* left,int* right)
 {
-int interval=10;
+int interval=2;
 int l=i-interval>=0?i-interval:0;
-	if(i>=log->exit&&i-interval<log->exit)l=log->exit;
-	if(i>=log->deployment&&i-interval<log->deployment)l=log->deployment;
 int r=i+interval<=log->points-1?i+interval:log->points-1;
-	if(i<log->exit&&i+interval>=log->exit)r=log->exit-1;
-	if(i<log->deployment&&i+interval>=log->deployment)r=log->deployment-1;
 *left=l;
 *right=r;
 }
@@ -299,5 +301,22 @@ return log_get_vel_horz(log,i)/log_get_vel_vert(log,i);
 float log_get_heading(log_t* log,int i)
 {
 return M_PI+atan2(log->vel_e[i],log->vel_n[i]);
+}
+
+float log_get_point_by_value(log_t* log,float (*xaxis)(log_t*,int),float x,int* left,int* right,float* u)
+{
+///Find nearest two points by binary search, then interpolate
+int l=0;
+int r=log->points-1;
+int mid=(l+r)/2;
+	while(mid!=l&&mid!=r)
+	{
+		if(xaxis(log,mid)<x)l=mid;
+		else r=mid;
+	mid=(l+r)/2;
+	}
+*left=l;
+*right=r;
+*u=(x-xaxis(log,l))/(xaxis(log,r)-xaxis(log,l));
 }
 

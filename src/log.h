@@ -38,6 +38,8 @@ float log_get_drag_coefficient(log_t* log,int i);
 float log_get_lift_drag_ratio(log_t* log,int i);
 float log_get_glide_ratio(log_t* log,int i);
 float log_get_heading(log_t* log,int i);
+float log_get_point_by_value(log_t* log,float (*xaxis)(log_t*,int),float x,int* left,int* right,float* u);
+float get_distance(float lat1,float lon1,float lat2,float lon2);
 
 
 #endif

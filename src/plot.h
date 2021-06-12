@@ -54,6 +54,7 @@ log_t* log;
 
 
 void plot_set_size(plot_t* plot,int width,int height);
+extern float (*plot_functions[])(log_t*,int);
 
 
 plot_t plot_new(plot_t* plot,log_t* log);
