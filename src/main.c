@@ -5,16 +5,25 @@
 #include "polar.h"
 #include "map.h"
 #include "wind.h"
+#include "serialization.h"
 
 plot_t plot; 
 log_t cur_log; 
+char cur_filename[512];
+
 
 int load_log(const char* filename)
 {
+	if(cur_log.points>0)
+	{
+		if(save_data(cur_filename))printf("Failed saving metadata for %s\n",cur_filename);
+	}
 	if(log_parse(filename,&cur_log))return 1;
+strcpy(cur_filename,filename);
 plot_new(&plot,&cur_log);
 polar_init();
 wind_init();
+load_data(filename);
 return 0;
 }
 
@@ -66,9 +75,11 @@ context=gtk_widget_get_style_context(widget);
 width=gtk_widget_get_allocated_width(widget);
 height=gtk_widget_get_allocated_height(widget);
 gtk_render_background(context,cr,0,0,width,height);
-
-plot_set_size(&plot,width,height);//TODO only call when necessary
-plot_draw(&plot,cr);
+	if(cur_log.points>0)
+	{
+	plot_set_size(&plot,width,height);//TODO only call when necessary
+	plot_draw(&plot,cr);
+	}
 return FALSE;
 }
 
@@ -223,11 +234,6 @@ cur_log.points=0;
 		return 1;
 		}
 	}
-	else 
-	{
-	printf("Usage: LogViewer <filename>\n");
-	return 1;
-	}
 
 gtk_init(&argc,&argv);
 
@@ -251,5 +257,11 @@ gtk_widget_show_all(window);
 //open_polar_window(NULL,NULL);
 
 gtk_main();
+
+	if(cur_log.points>0)
+	{
+		if(save_data(cur_filename))printf("Failed saving metadata for %s\n",cur_filename);
+		else printf("Metadata saved\n");
+	}
 return 0;
 }
