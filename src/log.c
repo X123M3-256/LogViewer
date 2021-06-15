@@ -65,7 +65,7 @@ int start_time=0;
 	int centiseconds=100*(s+60*m+3600*h)+c;
 		if(i==0)start_time=centiseconds;
 	//If the current timestamp is less than the current time, that means that midnight has passed. This will fail if the log lasts more than 24 hours, but that seems unlikely
-	log->time[i]=centiseconds>start_time?centiseconds-start_time:centiseconds+24*360000;
+	log->time[i]=centiseconds>=start_time?centiseconds-start_time:(centiseconds-start_time)+24*360000;
 	}
 
 log->distance[0]=0.0;
