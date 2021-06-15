@@ -17,7 +17,7 @@ float x_scale;
 log_t* log;
 }timeline_t;
 
-void timeline_init(timeline_t* timeline,log_t* log);
+void timeline_init(timeline_t* timeline,log_t* log,int start,int end);
 void timeline_connect_signals(timeline_t* timeline,GtkWidget* widget);
 
 #endif

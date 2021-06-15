@@ -190,7 +190,7 @@ return FALSE;
 
 void wind_init()
 {
-timeline_init(&wind_timeline,&cur_log);
+timeline_init(&wind_timeline,&cur_log,cur_log.takeoff,cur_log.landing);
 }
 
 //TODO this is a bit of a hack, look into a custom signal
@@ -221,14 +221,14 @@ timeline_connect_signals(&wind_timeline,timeline_plot);
 gtk_widget_add_events(timeline_plot,GDK_POINTER_MOTION_MASK|GDK_BUTTON_PRESS_MASK|GDK_BUTTON_RELEASE_MASK);
 gtk_builder_connect_signals(builder,NULL);
 
-wind_timeline.start=cur_log.takeoff+500;	
-wind_timeline.end=cur_log.landing-3000;
-
 //TODO this is a bit of a hack, look into a custom signal
 g_signal_connect(G_OBJECT(timeline_plot),"motion-notify_event",G_CALLBACK(update_wind),velocity_plot);
 
 gtk_widget_show_all(window);
 g_object_unref(G_OBJECT(builder));
+
+//Compute wind speed and direction (needed because airspeeds are not saved)
+compute_wind(&(cur_log.wind_n),&(cur_log.wind_e),airspeeds);
 }
 
 

@@ -120,7 +120,7 @@ return FALSE;
 
 void polar_init()
 {
-timeline_init(&polar_timeline,&cur_log);
+timeline_init(&polar_timeline,&cur_log,cur_log.exit,cur_log.deployment);
 }
 
 void open_polar_window(GtkWidget *widget,gpointer data)
@@ -138,10 +138,6 @@ timeline_connect_signals(&polar_timeline,timeline_plot);
 
 //TODO this is a bit of a hack, look into a custom signal
 g_signal_connect(G_OBJECT(timeline_plot),"motion-notify_event",G_CALLBACK(update_polar),polar_plot);
-
-polar_timeline.start=cur_log.exit;	
-polar_timeline.end=cur_log.deployment;
-
 
 gtk_widget_show_all(window);
 g_object_unref(G_OBJECT(builder));

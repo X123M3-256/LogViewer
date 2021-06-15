@@ -3,14 +3,14 @@
 
 float log_get_absolute_time(log_t* log,int i)
 {
-return 0.01*(log->time[i]-log->time[log->takeoff]);
+return 0.01*(log->time[i]);
 }
 
 int timeline_get_point(timeline_t* timeline,int x)
 {
 int l,r;
 float u;
-log_get_point_by_value(timeline->log,log_get_absolute_time,x/timeline->x_scale,&l,&r,&u);
+log_get_point_by_value(timeline->log,log_get_absolute_time,x/timeline->x_scale+log_get_absolute_time(timeline->log,timeline->start),&l,&r,&u);
 	if(u>0.5)return r;
 return l;
 }
@@ -22,7 +22,7 @@ timeline->drag_active=1;
 timeline->drag_target=-1;
 	for(int i=0;i<2*timeline->intervals;i++)
 	{
-		if(fabs(log_get_absolute_time(timeline->log,timeline->interval_points[i])*timeline->x_scale-event->motion.x)<5)timeline->drag_target=i;
+		if(fabs((log_get_absolute_time(timeline->log,timeline->interval_points[i])-log_get_absolute_time(timeline->log,timeline->start))*timeline->x_scale-event->motion.x)<5)timeline->drag_target=i;
 	}
 	if(timeline->drag_target==-1)
 	{
@@ -102,7 +102,7 @@ void timeline_plot(timeline_t* timeline,cairo_t* cr,float height,float y_scale,f
 cairo_set_source_rgba(cr,r,g,b,1.0);
 	for(int i=timeline->log->takeoff;i<=timeline->log->landing;i++)
 	{
-	float x=0.01*timeline->x_scale*(timeline->log->time[i]-timeline->log->time[timeline->log->takeoff]);
+	float x=0.01*timeline->x_scale*(timeline->log->time[i]-timeline->log->time[timeline->start]);
 	float y=height-y_scale*data(timeline->log,i);
 		if(i==0)cairo_move_to(cr,x,y);
 		else cairo_line_to(cr,x,y);
@@ -128,10 +128,10 @@ timeline_t* timeline=(timeline_t*)data;
 	if(timeline->log->points>0)
 	{
 	//Get bounds
-	float x_range=(0.01*(timeline->log->time[timeline->log->landing]-timeline->log->time[timeline->log->takeoff]));	
+	float x_range=(0.01*(timeline->log->time[timeline->end]-timeline->log->time[timeline->start]));	
 	float y_range=0.0;
 	float v_range=0.0;
-		for(int i=timeline->log->takeoff;i<timeline->log->landing;i++)
+		for(int i=timeline->start;i<timeline->end;i++)
 		{
 		y_range=fmax(y_range,fabs(log_get_altitude(timeline->log,i)));
 		v_range=fmax(v_range,fabs(log_get_vel_horz(timeline->log,i)));
@@ -158,8 +158,8 @@ timeline_t* timeline=(timeline_t*)data;
 
 		for(int i=0;i<timeline->intervals;i++)
 		{
-		float x_start=(int)(0.01*x_scale*(timeline->log->time[timeline->interval_points[2*i]]-timeline->log->time[timeline->log->takeoff]))+0.5;
-		float x_end=(int)(0.01*x_scale*(timeline->log->time[timeline->interval_points[2*i+1]]-timeline->log->time[timeline->log->takeoff]))+0.5;
+		float x_start=(int)(0.01*x_scale*(timeline->log->time[timeline->interval_points[2*i]]-timeline->log->time[timeline->start]))+0.5;
+		float x_end=(int)(0.01*x_scale*(timeline->log->time[timeline->interval_points[2*i+1]]-timeline->log->time[timeline->start]))+0.5;
 		cairo_set_source_rgba(cr,0.0,0.0,0.0,0.25);
 		cairo_rectangle(cr,x_start,0,0.01*x_scale*(timeline->log->time[timeline->interval_points[2*i+1]]-timeline->log->time[timeline->interval_points[2*i]]),height);
 		cairo_fill(cr);
@@ -175,10 +175,10 @@ timeline_t* timeline=(timeline_t*)data;
 return FALSE;
 }
 
-void timeline_init(timeline_t* timeline,log_t* log)
+void timeline_init(timeline_t* timeline,log_t* log,int start,int end)
 {
-timeline->start=0;
-timeline->end=log->points;
+timeline->start=start;
+timeline->end=end;
 timeline->intervals=0;
 timeline->drag_active=0;
 timeline->drag_target=0;
