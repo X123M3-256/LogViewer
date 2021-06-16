@@ -28,39 +28,12 @@
                     <property name="can-focus">False</property>
                     <child>
                       <object class="GtkImageMenuItem">
-                        <property name="label">gtk-new</property>
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="use-underline">True</property>
-                        <property name="use-stock">True</property>
-                        <signal name="activate" handler="new_clicked" object="window1" swapped="no"/>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkImageMenuItem">
                         <property name="label">gtk-open</property>
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
                         <property name="use-underline">True</property>
                         <property name="use-stock">True</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkImageMenuItem">
-                        <property name="label">gtk-save</property>
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="use-underline">True</property>
-                        <property name="use-stock">True</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkImageMenuItem">
-                        <property name="label">gtk-save-as</property>
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="use-underline">True</property>
-                        <property name="use-stock">True</property>
+                        <signal name="activate" handler="open_clicked" object="window1" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -196,6 +169,15 @@
                       </object>
                     </child>
                     <child>
+                      <object class="GtkCheckMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Map</property>
+                        <property name="use-underline">True</property>
+                        <signal name="toggled" handler="map_toggled" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
                       <object class="GtkSeparatorMenuItem">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
@@ -250,15 +232,6 @@
                       <object class="GtkMenuItem">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">Map</property>
-                        <property name="use-underline">True</property>
-                        <signal name="activate" handler="open_map_window" swapped="no"/>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkMenuItem">
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
                         <property name="label" translatable="yes">Drag Polar</property>
                         <property name="use-underline">True</property>
                         <signal name="activate" handler="open_polar_window" swapped="no"/>
@@ -276,13 +249,45 @@
           </packing>
         </child>
         <child>
-          <object class="GtkDrawingArea" id="plot_area">
+          <object class="GtkBox">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
-            <signal name="button-press-event" handler="plot_button_press" swapped="no"/>
-            <signal name="button-release-event" handler="plot_button_release" swapped="no"/>
-            <signal name="draw" handler="draw_plot" swapped="no"/>
-            <signal name="motion-notify-event" handler="plot_motion" swapped="no"/>
+            <child>
+              <object class="GtkDrawingArea" id="plot_area">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <signal name="button-press-event" handler="plot_button_press" swapped="no"/>
+                <signal name="button-release-event" handler="plot_button_release" swapped="no"/>
+                <signal name="draw" handler="draw_plot" swapped="no"/>
+                <signal name="motion-notify-event" handler="map_plot_motion" object="map" swapped="no"/>
+                <signal name="motion-notify-event" handler="plot_motion" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkDrawingArea" id="map">
+                <property name="can-focus">False</property>
+                <property name="no-show-all">True</property>
+                <property name="margin-start">10</property>
+                <property name="margin-end">10</property>
+                <property name="margin-top">10</property>
+                <property name="margin-bottom">20</property>
+                <signal name="button-press-event" handler="map_button_press" swapped="no"/>
+                <signal name="button-release-event" handler="map_button_release" swapped="no"/>
+                <signal name="draw" handler="map_draw" swapped="no"/>
+                <signal name="motion-notify-event" handler="map_motion" swapped="no"/>
+                <signal name="scroll-event" handler="map_scroll" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="expand">True</property>

@@ -28,6 +28,7 @@ gboolean map_plot_motion(GtkWidget *widget,GdkEvent *event,gpointer user_data)
 gtk_widget_queue_draw(GTK_WIDGET(user_data));
 }
 
+/*
 void open_map_window(GtkWidget *widget,gpointer data)
 {
 
@@ -47,6 +48,7 @@ g_signal_connect(G_OBJECT(plot_area),"motion-notify-event",G_CALLBACK(map_plot_m
 gtk_widget_show_all(window);
 g_object_unref(G_OBJECT(builder));
 }
+*/
 
 
 
@@ -72,10 +74,10 @@ map.elevation=65;
 //TODO account for map distortion
 map.pixels_per_meter=map.image_width/get_distance(map.lat_start,map.lon_start,map.lat_end,map.lon_start);
 
-map.image[0]=load_image("data/lps0.png");
-	if(map.image[0]==NULL)return 1;
-map.image[1]=load_image("data/lps1.png");
-	if(map.image[1]==NULL)return 1;
+//map.image[0]=load_image("data/lps0.png");
+//	if(map.image[0]==NULL)return 1;
+//map.image[1]=load_image("data/lps1.png");
+//	if(map.image[1]==NULL)return 1;
 map.image[2]=load_image("data/lps2.png");
 	if(map.image[2]==NULL)return 1;
 map.image[3]=load_image("data/lps3.png");
@@ -116,7 +118,7 @@ void map_get_lonlat(float x,float y,float* lon,float* lat)
 }
 */
 
-void map_draw_trace(cairo_t* cr,int start,int finish,float r,float g,float b)
+void map_draw_trace(cairo_t* cr,int start,int finish)
 {
 float* top_x=calloc(finish-start+1,sizeof(float));
 float* top_y=calloc(finish-start+1,sizeof(float));
@@ -129,43 +131,73 @@ float* bottom_y=calloc(finish-start+1,sizeof(float));
 	}
 
 cairo_set_line_width(cr,1.0);
-cairo_move_to(cr,top_x[0],top_y[0]);
+cairo_set_source_rgba(cr,0.2,0.2,0.2,1);
+cairo_move_to(cr,bottom_x[0],bottom_y[0]);
 	for(int i=1;i<=finish-start;i++)
 	{
-	cairo_line_to(cr,top_x[i],top_y[i]);
+	cairo_line_to(cr,bottom_x[i],bottom_y[i]);
 	}
-cairo_set_source_rgba(cr,0.2,0.2,0.2,1);
 cairo_stroke(cr);
 
 
 //TODO use fixed time interval instead of fixed number of points
+float dist=log_get_distance(&cur_log,start);
+int i=start;
+int next_i=0;
 
-cairo_set_source_rgba(cr,0.8,0.8,0.8,0.2);
-	for(int i=0;i<finish-start-9;i+=10)
+	while(i<finish)
 	{
-	cairo_move_to(cr,top_x[i],top_y[i]);
-		for(int j=1;j<=10;j++)cairo_line_to(cr,top_x[i+j],top_y[i+j]);
-		for(int j=10;j>=0;j--)cairo_line_to(cr,bottom_x[i+j],bottom_y[i+j]);
+	//Get next index
+	dist+=50.0;
+	int l,r;
+	float u;
+	log_get_point_by_value(&cur_log,log_get_distance,dist,&l,&r,&u);
+		if(u>0.5)next_i=r;	
+		else next_i=l;
+		if(next_i>finish)next_i=finish;
+	//Draw shaded area
+	cairo_set_source_rgba(cr,0.8,0.8,0.8,0.2);
+	cairo_move_to(cr,top_x[i-start],top_y[i-start]);
+		for(int j=i;j<=next_i;j++)cairo_line_to(cr,top_x[j-start],top_y[j-start]);
+		for(int j=next_i;j>=i;j--)cairo_line_to(cr,bottom_x[j-start],bottom_y[j-start]);
 	cairo_close_path(cr);
 	cairo_fill(cr);
-	}
 
-cairo_set_source_rgba(cr,0.1,0.1,0.1,0.5);
-	for(int i=0;i<=finish-start;i+=10)
-	{
-	cairo_move_to(cr,top_x[i],top_y[i]);
-	cairo_line_to(cr,bottom_x[i],bottom_y[i]);
+	//Draw vertical line
+	cairo_set_source_rgba(cr,0.1,0.1,0.1,0.5);
+	cairo_move_to(cr,top_x[i-start],top_y[i-start]);
+	cairo_line_to(cr,bottom_x[i-start],bottom_y[i-start]);
 	cairo_stroke(cr);
+	
+	i=next_i;
 	}
-
 
 cairo_set_line_width(cr,1.0);
+
+
+//Draw run in
+cairo_set_source_rgba(cr,0.5,0,1,1);
 cairo_move_to(cr,top_x[0],top_y[0]);
-	for(int i=1;i<=finish-start;i++)
+	for(int i=1;i<=cur_log.exit-start;i++)
 	{
 	cairo_line_to(cr,top_x[i],top_y[i]);
 	}
-cairo_set_source_rgba(cr,r,g,b,1);
+cairo_stroke(cr);
+//Draw freefall
+cairo_set_source_rgba(cr,0,1,0,1);
+cairo_move_to(cr,top_x[cur_log.exit-start],top_y[cur_log.exit-start]);
+	for(int i=cur_log.exit-start+1;i<=cur_log.deployment-start;i++)
+	{
+	cairo_line_to(cr,top_x[i],top_y[i]);
+	}
+cairo_stroke(cr);
+//Draw canopy
+cairo_set_source_rgba(cr,1,0,0,1);
+cairo_move_to(cr,top_x[cur_log.deployment-start],top_y[cur_log.deployment-start]);
+	for(int i=cur_log.deployment-start+1;i<=finish-start;i++)
+	{
+	cairo_line_to(cr,top_x[i],top_y[i]);
+	}
 cairo_stroke(cr);
 
 free(top_x);
@@ -189,11 +221,12 @@ cairo_rectangle(cr,0,0,width,height);
 cairo_set_source_rgba(cr,0.1,0.6,1,1);
 cairo_fill(cr);
 
-
+cairo_save(cr);
 cairo_translate(cr,width/2,height/2);
 float x,y;
 map_get_coords(map.cur_lon,map.cur_lat,0,&x,&y);
 cairo_translate(cr,-x,-y);
+
 
 cairo_save(cr);
 cairo_scale(cr,map.scale,map.scale);
@@ -202,24 +235,24 @@ cairo_rotate(cr,map.rotation);
 
 
 
-int level=0;
+int level=2;
 	if(map.scale<0.075)level=4;
 	else if(map.scale<0.15)level=3;
 	else if(map.scale<0.3)level=2;
-	else if(map.scale<0.6)level=1;
+	//else if(map.scale<0.6)level=1;
 cairo_scale(cr,(float)(1<<level),(float)(1<<level));
 
 cairo_set_source_surface (cr,map.image[level],0,0);
 cairo_paint(cr);
 cairo_restore(cr);
 
-map_draw_trace(cr,cur_log.deployment,cur_log.landing,1,0,0);
-map_draw_trace(cr,cur_log.exit,cur_log.deployment,0,1,0);
-map_draw_trace(cr,cur_log.exit-100,cur_log.exit,0.5,0,1);
-
-
+//Show last 500m of the run in
 int left,right;
 float u;
+log_get_point_by_value(&cur_log,log_get_distance,-500.0,&left,&right,&u);
+map_draw_trace(cr,left,cur_log.landing);
+
+
 log_get_point_by_value(&cur_log,plot_functions[plot.x_axis_variable],plot.cursor_x,&left,&right,&u);
 float longitude=(1-u)*cur_log.longitude[left]+u*cur_log.longitude[right];
 float latitude=(1-u)*cur_log.latitude[left]+u*cur_log.latitude[right];
@@ -268,12 +301,90 @@ cairo_fill(cr);
 	cairo_move_to(cr,x,y);
 	cairo_set_source_rgba(cr,1,1,1,1);
 	cairo_show_text(cr,str);
+	cairo_fill(cr);
+	}
+cairo_restore(cr);
+
+cairo_save(cr);
+cairo_translate(cr,width-60,60);
+int compass_radius=40;
+int compass_inner_radius=32;
+int compass_tick_length=4;
+int compass_pointer_width=4;
+int compass_pointer_height=27;
+
+cairo_set_line_width(cr,1.0);
+cairo_set_source_rgba(cr,0.8,0.8,0.8,1);
+cairo_arc(cr,0,0,compass_radius,0,2*M_PI);
+cairo_stroke(cr);
+cairo_arc(cr,0,0,compass_inner_radius,0,2*M_PI);
+cairo_stroke(cr);
+	for(int i=0;i<36;i++)
+	{
+	float dir_x=sin(-map.rotation+M_PI*i/18.0);	
+	float dir_y=cos(-map.rotation+M_PI*i/18.0);
+	cairo_move_to(cr,compass_inner_radius*dir_x,compass_inner_radius*dir_y);
+		if(i&1)cairo_line_to(cr,(compass_inner_radius+compass_tick_length)*dir_x,(compass_inner_radius+compass_tick_length)*dir_y);
+		else cairo_line_to(cr,compass_radius*dir_x,compass_radius*dir_y);
+	}
+cairo_stroke(cr);
+
+cairo_set_font_size(cr,12);
+const char* labels[]={"N","E","S","W"};
+	for(int i=0;i<4;i++)
+	{
+	cairo_save(cr);
+	cairo_rotate(cr,map.rotation+0.5*i*M_PI);
+	cairo_text_extents_t extents;
+	cairo_text_extents(cr,labels[i],&extents);
+	cairo_move_to(cr,-extents.x_bearing-extents.width/2,-20);
+	cairo_show_text(cr,labels[i]);
+	cairo_fill(cr);
+
+	cairo_restore(cr);
 	}
 
 
+cairo_set_source_rgba(cr,0.9,0,0,1);
+cairo_move_to(cr,-compass_pointer_width,0);
+cairo_line_to(cr,compass_pointer_width,0);
+cairo_line_to(cr,0,-compass_pointer_height);
+cairo_close_path(cr);
+cairo_fill(cr);
+cairo_set_source_rgba(cr,0.3,0.3,0.3,1);
+cairo_move_to(cr,-compass_pointer_width,0);
+cairo_line_to(cr,compass_pointer_width,0);
+cairo_line_to(cr,0,compass_pointer_height);
+cairo_close_path(cr);
+cairo_fill(cr);
+cairo_restore(cr);
+
+float wind=sqrt(cur_log.wind_n*cur_log.wind_n+cur_log.wind_e*cur_log.wind_e);
+float bearing=atan2(-cur_log.wind_e,-cur_log.wind_n);
+cairo_set_source_rgba(cr,0.9,0.9,0.9,1);
+cairo_set_font_size(cr,13);
+cairo_move_to(cr,30,30);
+char str[256];
+sprintf(str,"Wind %.1fm/s (%.0f mph) %.0f\u00B0",wind,wind*2.236936,(bearing>=0?0.0:360.0)+180*bearing/M_PI);
+cairo_show_text(cr,str);
 
 
+cairo_translate(cr,110,75);
+cairo_set_source_rgba(cr,1.0,0.5,0.0,1);
+cairo_rotate(cr,map.rotation+bearing);
+float wind_scale=3.0;
+cairo_move_to(cr,0,-wind_scale*wind);
+cairo_line_to(cr,0,wind_scale*wind);
+cairo_stroke(cr);
+int arrow_width=5;
+int arrow_height=8;
 
+cairo_move_to(cr,0,wind_scale*wind);
+cairo_line_to(cr,-arrow_width,wind_scale*wind);
+cairo_line_to(cr,0,wind_scale*wind+arrow_height);
+cairo_line_to(cr,arrow_width,wind_scale*wind);
+cairo_close_path(cr);
+cairo_fill(cr);
 
 return FALSE;
 }

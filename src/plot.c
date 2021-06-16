@@ -25,7 +25,7 @@ plot_t plot_new(plot_t* plot,log_t* log)
 {
 plot->log=log;
 plot->left_margin=60;
-plot->right_margin=20;
+plot->right_margin=10;
 plot->top_margin=10;
 plot->bottom_margin=20;
 

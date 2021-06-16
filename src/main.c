@@ -7,6 +7,10 @@
 #include "wind.h"
 #include "serialization.h"
 
+//TODO making this global is ugly hack
+GtkWidget* plot_area;
+GtkWidget* map_area;
+
 plot_t plot; 
 log_t cur_log; 
 char cur_filename[512];
@@ -39,7 +43,7 @@ gtk_main_quit();
 return FALSE;
 }
 
-void new_clicked(GtkWidget *widget,gpointer data)
+void open_clicked(GtkWidget *widget,gpointer data)
 {
 GtkWidget* dialog=gtk_file_chooser_dialog_new("Import Log File",GTK_WINDOW(data),GTK_FILE_CHOOSER_ACTION_OPEN,"_Cancel",GTK_RESPONSE_CANCEL,"_Import",GTK_RESPONSE_ACCEPT,NULL);
 
@@ -171,6 +175,15 @@ plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
+void map_toggled(GtkCheckMenuItem* menu_item,gpointer data)
+{
+	if(gtk_check_menu_item_get_active(menu_item))gtk_widget_show(map_area);
+	else gtk_widget_hide(map_area);
+plot_recalculate_range(&plot);
+gtk_widget_queue_draw(GTK_WIDGET(data));
+}
+
+
 void axis_time(GtkMenuItem* menu_item,gpointer data)
 {
 plot.x_axis_variable=0;
@@ -219,10 +232,6 @@ gtk_widget_queue_draw(GTK_WIDGET(widget));
 
 
 
-
-
-//TODO making this global is ugly hack
-GtkWidget* plot_area;
 int main(int argc,char **argv)
 {
 cur_log.points=0;
@@ -249,14 +258,20 @@ GtkBuilder* builder=gtk_builder_new();
 GtkWidget* window=GTK_WIDGET(gtk_builder_get_object(builder,"window1"));
 //gtk_window_fullscreen(GTK_WINDOW(window));
 plot_area=GTK_WIDGET(gtk_builder_get_object(builder,"plot_area"));
+map_area=GTK_WIDGET(gtk_builder_get_object(builder,"map"));
+gtk_widget_add_events(map_area,GDK_POINTER_MOTION_MASK|GDK_BUTTON_PRESS_MASK|GDK_BUTTON_RELEASE_MASK|GDK_SCROLL_MASK);
 gtk_widget_add_events(plot_area,GDK_POINTER_MOTION_MASK|GDK_BUTTON_PRESS_MASK|GDK_BUTTON_RELEASE_MASK);
 gtk_builder_connect_signals(builder,NULL);
 
+	if(load_map())
+	{
+	printf("Failed loading map\n");
+	}
+
 gtk_widget_show_all(window);
 
-//open_polar_window(NULL,NULL);
-
 gtk_main();
+	
 
 	if(cur_log.points>0)
 	{
