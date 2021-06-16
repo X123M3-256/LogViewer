@@ -54,7 +54,16 @@ log_t* log;
 
 
 void plot_set_size(plot_t* plot,int width,int height);
+
+extern const char* units[5];
+extern const char* unit_alternate[5];
+extern float unit_alternate_scale[5];
+
 extern float (*plot_functions[])(log_t*,int);
+extern float plot_colors[PLOT_NUM][3];
+extern int plot_units[PLOT_NUM];
+extern const char* plot_names[PLOT_NUM];
+extern const char* plot_range_names[PLOT_NUM];
 
 
 plot_t plot_new(plot_t* plot,log_t* log);

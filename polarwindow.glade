@@ -14,11 +14,11 @@
             <property name="visible">True</property>
             <property name="can-focus">False</property>
             <signal name="draw" handler="draw_polar_plot" swapped="no"/>
+            <signal name="motion-notify-event" handler="polar_motion" swapped="no"/>
           </object>
           <packing>
             <property name="expand">True</property>
             <property name="fill">True</property>
-            <property name="padding">3</property>
             <property name="position">0</property>
           </packing>
         </child>
