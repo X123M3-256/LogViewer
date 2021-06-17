@@ -70,6 +70,31 @@
                       <object class="GtkCheckMenuItem">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Freefall</property>
+                        <property name="use-underline">True</property>
+                        <property name="active">True</property>
+                        <signal name="toggled" handler="freefall_toggled" object="plot_area" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Canopy</property>
+                        <property name="use-underline">True</property>
+                        <signal name="toggled" handler="canopy_toggled" object="plot_area" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSeparatorMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
                         <property name="label" translatable="yes">Altitude</property>
                         <property name="use-underline">True</property>
                         <property name="active">True</property>
@@ -82,7 +107,7 @@
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">Distance</property>
                         <property name="use-underline">True</property>
-                        <signal name="toggled" handler="distance_toggled" swapped="no"/>
+                        <signal name="toggled" handler="distance_toggled" object="plot_area" swapped="no"/>
                       </object>
                     </child>
                     <child>

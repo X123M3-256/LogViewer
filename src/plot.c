@@ -71,9 +71,9 @@ int x_ticks=(int)((usable_width/target)+0.5);
 int y_ticks=(int)((usable_height/target)+0.5);
 
 //Calculate x tick spacing and data range
-plot->x_start=0.0;
-plot->x_tick_spacing=calculate_tick_spacing(x_ticks,plot_functions[plot->x_axis_variable](plot->log,plot->end));
-plot->x_range=plot_functions[plot->x_axis_variable](plot->log,plot->end)/plot->x_tick_spacing;
+plot->x_tick_spacing=calculate_tick_spacing(x_ticks,plot_functions[plot->x_axis_variable](plot->log,plot->end)-plot_functions[plot->x_axis_variable](plot->log,plot->start));
+plot->x_start=plot_functions[plot->x_axis_variable](plot->log,plot->start);
+plot->x_range=(plot_functions[plot->x_axis_variable](plot->log,plot->end)-plot->x_start)/plot->x_tick_spacing;
 
 //Calculate y tick spacing and data range
 float y_ranges[5]={0,0,0,0,0};
@@ -104,6 +104,8 @@ float y_range=0.0;
 plot->y_start=0.0;
 plot->y_range=ceil(y_range);
 
+plot->x_scale=(plot->width-plot->left_margin-plot->right_margin)/(float)plot->x_range;
+plot->y_scale=(plot->height-plot->top_margin-plot->bottom_margin)/(float)plot->y_range;
 }
 
 
@@ -112,17 +114,15 @@ void plot_set_size(plot_t* plot,int width,int height)
 plot->width=width;
 plot->height=height;
 plot_recalculate_range(plot);
-plot->x_scale=(width-plot->left_margin-plot->right_margin)/(float)plot->x_range;
-plot->y_scale=(height-plot->top_margin-plot->bottom_margin)/(float)plot->y_range;
 }
 
-
+//TODO consider allowing negative axis
 void plot_data(plot_t* plot,cairo_t* cr,float (*xaxis)(log_t*,int),float (*data)(log_t*,int),float tick_spacing,float r,float g,float b)
 {
 cairo_move_to(cr,plot->left_margin,plot->bottom_margin+plot->y_scale*data(plot->log,plot->start)/tick_spacing);
 	for(int i=plot->start+1;i<plot->end;i++)
 	{
-	cairo_line_to(cr,plot->left_margin+plot->x_scale*(xaxis(plot->log,i)-plot->x_start)/plot->x_tick_spacing,plot->bottom_margin+plot->y_scale*data(plot->log,i)/tick_spacing);
+	cairo_line_to(cr,plot->left_margin+plot->x_scale*(xaxis(plot->log,i)-plot->x_start)/plot->x_tick_spacing,plot->bottom_margin+plot->y_scale*fabs(data(plot->log,i))/tick_spacing);
 	}
 cairo_set_source_rgba(cr,r,g,b,1.0);
 cairo_stroke(cr);
@@ -168,7 +168,7 @@ log_get_point_by_value(plot->log,plot_functions[plot->x_axis_variable],x,&l,&r,&
 	}
 
 //Draw vertical dashed line
-float x_coord=(int)(plot->left_margin+plot->x_scale*x/plot->x_tick_spacing)+0.5;
+float x_coord=(int)(plot->left_margin+plot->x_scale*(x-plot->x_start)/plot->x_tick_spacing)+0.5;
 cairo_save(cr);
 cairo_set_line_width(cr,1.2);
 double dashes[]={5.0,5.0};
@@ -333,11 +333,13 @@ cairo_set_source_rgba(cr,0.0,0.0,0.0,1.0);
 	}
 
 //Draw x labels
+int tick_start=(int)ceil(plot->x_start/plot->x_tick_spacing);
+int tick_end=(int)floor(plot->x_start/plot->x_tick_spacing+plot->x_range);
 cairo_set_source_rgba(cr,0.0,0.0,0.0,1.0);
-	for(int i=0;i<=(int)plot->x_range;i++)
+	for(int i=tick_start;i<=(int)plot->x_range+tick_end;i++)
 	{
 	cairo_save(cr);
-	cairo_translate(cr,plot->left_margin+(int)(i*plot->x_scale),plot->bottom_margin);
+	cairo_translate(cr,plot->left_margin+(int)((i-plot->x_start/plot->x_tick_spacing)*plot->x_scale),plot->bottom_margin);
 	cairo_scale(cr,1,-1);
 	
 	char label[256];
@@ -352,9 +354,11 @@ cairo_set_source_rgba(cr,0.0,0.0,0.0,1.0);
 	cairo_restore(cr);
 	}
 //Draw x ticks and grid lines
-	for(int i=1;i<=(int)plot->x_range;i++)
+	for(int i=tick_start;i<=(int)plot->x_range+tick_end;i++)
 	{
-	float tick_x=(int)(plot->left_margin+plot->x_scale*i)+0.5;
+		//Don't draw line for 0 because it coincides with the y axis (TODO this won't work once panning is supported)
+		if(i==0)continue;
+	float tick_x=(int)(plot->left_margin+(i-plot->x_start/plot->x_tick_spacing)*plot->x_scale)+0.5;
 	cairo_move_to(cr,tick_x,plot->bottom_margin-tick_length);
 	cairo_line_to(cr,tick_x,plot->bottom_margin);
 	cairo_set_source_rgba(cr,0.0,0.0,0.0,1.0);
@@ -424,7 +428,7 @@ draw_cursor(plot,cr,plot->cursor_x,values);
 	display_values[11]=display_values[3]/display_values[4];	
 
 	cairo_set_source_rgba(cr,0.6,0.6,0.6,0.5);
-	cairo_rectangle(cr,plot->left_margin+plot->x_scale*plot->cursor_x/plot->x_tick_spacing,plot->bottom_margin,plot->x_scale*plot->cursor_range/plot->x_tick_spacing,plot->height-plot->bottom_margin-plot->top_margin);
+	cairo_rectangle(cr,plot->left_margin+plot->x_scale*(plot->cursor_x-plot->x_start)/plot->x_tick_spacing,plot->bottom_margin,plot->x_scale*plot->cursor_range/plot->x_tick_spacing,plot->height-plot->bottom_margin-plot->top_margin);
 	cairo_fill(cr);
 	draw_legend(plot,cr,plot_range_names,display_values);
 	}

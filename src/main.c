@@ -95,6 +95,25 @@ plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
+
+void freefall_toggled(GtkCheckMenuItem* menu_item,gpointer data)
+{
+	if(gtk_check_menu_item_get_active(menu_item))plot.start=cur_log.exit;
+	else plot.start=cur_log.deployment;
+plot_recalculate_range(&plot);
+gtk_widget_queue_draw(GTK_WIDGET(data));
+}
+
+void canopy_toggled(GtkCheckMenuItem* menu_item,gpointer data)
+{
+	if(gtk_check_menu_item_get_active(menu_item))plot.end=cur_log.landing;
+	else plot.end=cur_log.deployment;
+plot_recalculate_range(&plot);
+gtk_widget_queue_draw(GTK_WIDGET(data));
+}
+
+
+
 void distance_toggled(GtkCheckMenuItem* menu_item,gpointer data)
 {
 	if(gtk_check_menu_item_get_active(menu_item))plot.active_plots|=PLOT_DISTANCE;
@@ -201,9 +220,9 @@ int plot_drag_active=0;
 
 gboolean plot_motion(GtkWidget *widget,GdkEvent *event,gpointer user_data)
 {
-float pos=plot.x_tick_spacing*(event->motion.x-plot.left_margin)/plot.x_scale;
-	if(pos<0.0)pos=0.0;
-	if(pos>plot.x_range*plot.x_tick_spacing)pos=plot.x_range*plot.x_tick_spacing;
+float pos=plot.x_tick_spacing*(event->motion.x-plot.left_margin)/plot.x_scale+plot.x_start;
+	if(pos<plot.x_start)pos=plot.x_start;
+	if(pos>plot.x_range*plot.x_tick_spacing+plot.x_start)pos=plot.x_range*plot.x_tick_spacing+plot.x_start;
 
 	if(plot_drag_active==0)
 	{

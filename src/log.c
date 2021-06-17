@@ -222,14 +222,14 @@ return (log->vel_e[right]-log->vel_e[left])/(0.01*(log->time[right]-log->time[le
 
 float log_get_acc_vert(log_t* log,int i)
 {
-return fabs(log_get_acc_d(log,i));
+return log_get_acc_d(log,i);
 }
 
 float log_get_acc_horz(log_t* log,int i)
 {
 int left,right;
 log_get_acc_difference_points(log,i,&left,&right);
-return fabs(log_get_vel_horz(log,right)-log_get_vel_horz(log,left))/(0.01*(log->time[right]-log->time[left]));
+return (log_get_vel_horz(log,right)-log_get_vel_horz(log,left))/(0.01*(log->time[right]-log->time[left]));
 }
 
 void log_get_drag_lift_coefficient(log_t* log,int i,float* drag,float* lift)
