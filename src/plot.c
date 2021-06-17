@@ -19,33 +19,13 @@ const char* plot_names[PLOT_NUM]={"Time","Altitude","Distance","Horizontal Veloc
 const char* plot_range_names[PLOT_NUM]={"Time (Difference)","Altitude (Difference)","Distance (Difference)","Horizontal Velocity (Average)","Vertical Velocity (Average)","Total Velocity (Average)","Horizontal Acceleration (Average)","Vertical Acceleration (Average)","Lift Coefficient (Average)","Drag Coefficient (Average)","L/D Ratio (Average)","Glide Ratio (Average)"};
 
 
-
-
-plot_t plot_new(plot_t* plot,log_t* log)
+void plot_set_range(plot_t* plot,int start,int end)
 {
-plot->log=log;
-plot->left_margin=60;
-plot->right_margin=10;
-plot->top_margin=10;
-plot->bottom_margin=20;
-
-plot->x_axis_variable=0;
-
-plot->start=log->exit!=-1?log->exit:0;
-plot->end=log->landing!=-1?log->deployment:plot->log->points-1;
-plot->active_plots=PLOT_ALTITUDE|PLOT_VEL_HORZ|PLOT_VEL_VERT;
-
-
-plot->cursor_x=0.0;
-plot->cursor_range=-1.0;
-
-plot_set_size(plot,640,480);
-
-//TODO Calculate margin size
+plot->start=start;
+plot->end=end;
+plot->x_start=plot_functions[plot->x_axis_variable](plot->log,plot->start);
+plot->x_end=(plot_functions[plot->x_axis_variable](plot->log,plot->end)-plot->x_start);
 }
-
-float tick_length=5.0;
-float tick_label_spacing=2.0;
 
 
 //TODO take account of actual range in calculating this
@@ -60,6 +40,7 @@ int i=0;
 return spacing_candidates[i];
 }
 
+
 //TODO improve this
 void plot_recalculate_range(plot_t* plot)
 {
@@ -71,9 +52,9 @@ int x_ticks=(int)((usable_width/target)+0.5);
 int y_ticks=(int)((usable_height/target)+0.5);
 
 //Calculate x tick spacing and data range
-plot->x_tick_spacing=calculate_tick_spacing(x_ticks,plot_functions[plot->x_axis_variable](plot->log,plot->end)-plot_functions[plot->x_axis_variable](plot->log,plot->start));
-plot->x_start=plot_functions[plot->x_axis_variable](plot->log,plot->start);
-plot->x_range=(plot_functions[plot->x_axis_variable](plot->log,plot->end)-plot->x_start)/plot->x_tick_spacing;
+plot->x_tick_spacing=calculate_tick_spacing(x_ticks,plot->x_end-plot->x_start);
+plot->x_range=(plot->x_end-plot->x_start)/plot->x_tick_spacing;
+printf("%f\n",plot->x_range);
 
 //Calculate y tick spacing and data range
 float y_ranges[5]={0,0,0,0,0};
@@ -101,12 +82,36 @@ float y_range=0.0;
 		}
 	}
 
-plot->y_start=0.0;
 plot->y_range=ceil(y_range);
 
 plot->x_scale=(plot->width-plot->left_margin-plot->right_margin)/(float)plot->x_range;
 plot->y_scale=(plot->height-plot->top_margin-plot->bottom_margin)/(float)plot->y_range;
 }
+
+plot_t plot_new(plot_t* plot,log_t* log)
+{
+plot->log=log;
+plot->left_margin=60;
+plot->right_margin=10;
+plot->top_margin=10;
+plot->bottom_margin=20;
+
+plot->x_axis_variable=0;
+plot->active_plots=PLOT_ALTITUDE|PLOT_VEL_HORZ|PLOT_VEL_VERT;
+
+plot_set_range(plot,log->exit,log->deployment);
+
+plot->cursor_x=0.0;
+plot->cursor_range=-1.0;
+
+plot_set_size(plot,640,480);
+
+//TODO Calculate margin size
+}
+
+float tick_length=5.0;
+float tick_label_spacing=2.0;
+
 
 
 void plot_set_size(plot_t* plot,int width,int height)
@@ -119,13 +124,16 @@ plot_recalculate_range(plot);
 //TODO consider allowing negative axis
 void plot_data(plot_t* plot,cairo_t* cr,float (*xaxis)(log_t*,int),float (*data)(log_t*,int),float tick_spacing,float r,float g,float b)
 {
-cairo_move_to(cr,plot->left_margin,plot->bottom_margin+plot->y_scale*data(plot->log,plot->start)/tick_spacing);
-	for(int i=plot->start+1;i<plot->end;i++)
+cairo_save(cr);
+cairo_rectangle(cr,plot->left_margin,plot->bottom_margin,plot->width-plot->left_margin-plot->right_margin,plot->height-plot->top_margin-plot->bottom_margin);
+cairo_clip(cr);
+	for(int i=plot->start;i<=plot->end;i++)
 	{
 	cairo_line_to(cr,plot->left_margin+plot->x_scale*(xaxis(plot->log,i)-plot->x_start)/plot->x_tick_spacing,plot->bottom_margin+plot->y_scale*fabs(data(plot->log,i))/tick_spacing);
 	}
 cairo_set_source_rgba(cr,r,g,b,1.0);
 cairo_stroke(cr);
+cairo_restore(cr);
 }
 
 void draw_y_label(plot_t* plot,cairo_t* cr,int i)
@@ -295,17 +303,6 @@ cairo_scale(cr,1,-1);
 cairo_translate(cr,0,-plot->height);
 
 cairo_set_line_width(cr,1.0);
-cairo_move_to(cr,plot->left_margin+0.5,plot->height-plot->top_margin+0.5);
-cairo_line_to(cr,plot->left_margin+0.5,plot->bottom_margin+0.5);
-cairo_line_to(cr,plot->width-plot->right_margin+0.5,plot->bottom_margin+0.5);
-cairo_set_source_rgba(cr,0.0,0.0,0.0,1.0);
-cairo_stroke(cr);
-cairo_move_to(cr,plot->width-plot->right_margin+0.5,plot->bottom_margin+0.5);
-cairo_line_to(cr,plot->width-plot->right_margin+0.5,plot->height-plot->top_margin+0.5);
-cairo_line_to(cr,plot->left_margin+0.5,plot->height-plot->top_margin+0.5);
-cairo_set_source_rgba(cr,0.5,0.5,0.5,1.0);
-cairo_stroke(cr);
-
 
 //Draw y labels
 cairo_set_source_rgba(cr,0.0,0.0,0.0,1.0);
@@ -356,7 +353,7 @@ cairo_set_source_rgba(cr,0.0,0.0,0.0,1.0);
 //Draw x ticks and grid lines
 	for(int i=tick_start;i<=(int)plot->x_range+tick_end;i++)
 	{
-		//Don't draw line for 0 because it coincides with the y axis (TODO this won't work once panning is supported)
+		//Don't draw line for 0 because it coincides with the y axis
 		if(i==0)continue;
 	float tick_x=(int)(plot->left_margin+(i-plot->x_start/plot->x_tick_spacing)*plot->x_scale)+0.5;
 	cairo_move_to(cr,tick_x,plot->bottom_margin-tick_length);
@@ -369,6 +366,19 @@ cairo_set_source_rgba(cr,0.0,0.0,0.0,1.0);
 	cairo_set_source_rgba(cr,0.5,0.5,0.5,1.0);
 	cairo_stroke(cr);
 	}
+//Draw axes
+cairo_move_to(cr,plot->left_margin+0.5,plot->height-plot->top_margin+0.5);
+cairo_line_to(cr,plot->left_margin+0.5,plot->bottom_margin+0.5);
+cairo_line_to(cr,plot->width-plot->right_margin+0.5,plot->bottom_margin+0.5);
+cairo_set_source_rgba(cr,0.0,0.0,0.0,1.0);
+cairo_stroke(cr);
+cairo_move_to(cr,plot->width-plot->right_margin+0.5,plot->bottom_margin+0.5);
+cairo_line_to(cr,plot->width-plot->right_margin+0.5,plot->height-plot->top_margin+0.5);
+cairo_line_to(cr,plot->left_margin+0.5,plot->height-plot->top_margin+0.5);
+cairo_set_source_rgba(cr,0.5,0.5,0.5,1.0);
+cairo_stroke(cr);
+
+
 
 //Plot data
 	for(int i=0;i<PLOT_NUM;i++)

@@ -286,6 +286,7 @@
                 <signal name="draw" handler="draw_plot" swapped="no"/>
                 <signal name="motion-notify-event" handler="map_plot_motion" object="map" swapped="no"/>
                 <signal name="motion-notify-event" handler="plot_motion" swapped="no"/>
+                <signal name="scroll-event" handler="plot_scroll" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>

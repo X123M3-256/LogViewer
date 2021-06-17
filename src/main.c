@@ -98,16 +98,17 @@ gtk_widget_queue_draw(GTK_WIDGET(data));
 
 void freefall_toggled(GtkCheckMenuItem* menu_item,gpointer data)
 {
-	if(gtk_check_menu_item_get_active(menu_item))plot.start=cur_log.exit;
-	else plot.start=cur_log.deployment;
+
+	if(gtk_check_menu_item_get_active(menu_item))plot_set_range(&plot,cur_log.exit,plot.end);
+	else plot_set_range(&plot,cur_log.deployment,plot.end);
 plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
 void canopy_toggled(GtkCheckMenuItem* menu_item,gpointer data)
 {
-	if(gtk_check_menu_item_get_active(menu_item))plot.end=cur_log.landing;
-	else plot.end=cur_log.deployment;
+	if(gtk_check_menu_item_get_active(menu_item))plot_set_range(&plot,plot.start,cur_log.landing);
+	else plot_set_range(&plot,plot.start,cur_log.deployment);
 plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
@@ -205,6 +206,7 @@ gtk_widget_queue_draw(GTK_WIDGET(data));
 void axis_time(GtkMenuItem* menu_item,gpointer data)
 {
 plot.x_axis_variable=0;
+plot_set_range(&plot,plot.start,plot.end);
 plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
@@ -212,11 +214,14 @@ gtk_widget_queue_draw(GTK_WIDGET(data));
 void axis_distance(GtkMenuItem* menu_item,gpointer data)
 {
 plot.x_axis_variable=2;
+plot_set_range(&plot,plot.start,plot.end);
 plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
 int plot_drag_active=0;
+int plot_drag_start=0;
+float drag_start=0.0;
 
 gboolean plot_motion(GtkWidget *widget,GdkEvent *event,gpointer user_data)
 {
@@ -228,16 +233,40 @@ float pos=plot.x_tick_spacing*(event->motion.x-plot.left_margin)/plot.x_scale+pl
 	{
 	plot.cursor_x=pos;
 	}
-	else
+	else if(plot_drag_active==1)
 	{
 	plot.cursor_range=pos-plot.cursor_x;
 	}
+	else 
+	{
+	plot.x_start=drag_start-plot.x_tick_spacing*(event->motion.x-plot_drag_start)/plot.x_scale;
+	plot.x_end=drag_start+plot.x_range*plot.x_tick_spacing-plot.x_tick_spacing*(event->motion.x-plot_drag_start)/plot.x_scale;
+	float start=plot_functions[plot.x_axis_variable](&cur_log,plot.start);
+	float end=plot_functions[plot.x_axis_variable](&cur_log,plot.end);
+		if(plot.x_start+plot.x_range*plot.x_tick_spacing>end)
+		{
+		plot.x_start=end-plot.x_range*plot.x_tick_spacing;
+		plot.x_end=plot.x_start+plot.x_range*plot.x_tick_spacing;
+		}
+		if(plot.x_start<start)
+		{
+		plot.x_start=start;
+		plot.x_end=plot.x_start+plot.x_range*plot.x_tick_spacing;
+		}
+	}
+
 gtk_widget_queue_draw(GTK_WIDGET(widget));
 }
 
 gboolean plot_button_press(GtkWidget *widget,GdkEvent *event,gpointer user_data)
 {
-plot_drag_active=1;
+	if(event->button.button==1)plot_drag_active=1;
+	else if (event->button.button==3)
+	{
+	plot_drag_active=2;
+	drag_start=plot.x_start;
+	plot_drag_start=event->button.x;
+	}
 gtk_widget_queue_draw(GTK_WIDGET(widget));
 }
 
@@ -248,6 +277,30 @@ plot.cursor_range=-1.0;
 gtk_widget_queue_draw(GTK_WIDGET(widget));
 }
 
+gboolean plot_scroll(GtkWidget *widget,GdkEvent *event,gpointer user_data)
+{
+	if(event->scroll.direction==GDK_SCROLL_UP)
+	{
+		if(plot.x_tick_spacing<=1.0)return TRUE;
+	plot.x_start=plot.cursor_x-(plot.cursor_x-plot.x_start)/1.5;
+	plot.x_end=plot.cursor_x-(plot.cursor_x-plot.x_end)/1.5;
+	plot_recalculate_range(&plot);
+	}
+	else if(event->scroll.direction==GDK_SCROLL_DOWN)
+	{
+	float range=plot.x_end-plot.x_start;
+	plot.x_start=plot.cursor_x-(plot.cursor_x-plot.x_start)*1.5;
+	plot.x_end=plot.cursor_x-(plot.cursor_x-plot.x_end)*1.5;
+	float start=plot_functions[plot.x_axis_variable](&cur_log,plot.start);
+	float end=plot_functions[plot.x_axis_variable](&cur_log,plot.end);
+		if(plot.x_start<start)plot.x_start=start;
+		if(plot.x_end>end)plot.x_end=end;
+	plot_recalculate_range(&plot);
+	}
+	//else if(event->scroll.direction==GDK_SCROLL_DOWN)map.scale*=0.5;
+gtk_widget_queue_draw(GTK_WIDGET(widget));
+return TRUE;  
+}
 
 
 int main(int argc,char **argv)
@@ -278,7 +331,7 @@ GtkWidget* window=GTK_WIDGET(gtk_builder_get_object(builder,"window1"));
 plot_area=GTK_WIDGET(gtk_builder_get_object(builder,"plot_area"));
 map_area=GTK_WIDGET(gtk_builder_get_object(builder,"map"));
 gtk_widget_add_events(map_area,GDK_POINTER_MOTION_MASK|GDK_BUTTON_PRESS_MASK|GDK_BUTTON_RELEASE_MASK|GDK_SCROLL_MASK);
-gtk_widget_add_events(plot_area,GDK_POINTER_MOTION_MASK|GDK_BUTTON_PRESS_MASK|GDK_BUTTON_RELEASE_MASK);
+gtk_widget_add_events(plot_area,GDK_POINTER_MOTION_MASK|GDK_BUTTON_PRESS_MASK|GDK_BUTTON_RELEASE_MASK|GDK_SCROLL_MASK);
 gtk_builder_connect_signals(builder,NULL);
 
 	if(load_map())

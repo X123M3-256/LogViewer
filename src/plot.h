@@ -38,8 +38,9 @@ float x_tick_spacing;
 float y_tick_spacing[5];
 
 float x_start;
+float x_end;
+
 float x_range;
-float y_start;
 float y_range;
 
 float cursor_x;
@@ -67,6 +68,7 @@ extern const char* plot_range_names[PLOT_NUM];
 
 
 plot_t plot_new(plot_t* plot,log_t* log);
+void plot_set_range(plot_t* plot,int start,int end);
 void plot_recalculate_range(plot_t* plot);
 void plot_draw(plot_t* plot,cairo_t *cr);
 
