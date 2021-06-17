@@ -111,16 +111,12 @@ void plot_set_size(plot_t* plot,int width,int height)
 {
 plot->width=width;
 plot->height=height;
+plot_recalculate_range(plot);
 plot->x_scale=(width-plot->left_margin-plot->right_margin)/(float)plot->x_range;
 plot->y_scale=(height-plot->top_margin-plot->bottom_margin)/(float)plot->y_range;
-plot_recalculate_range(plot);
 }
 
 
-
-
-
-//TODO allow distance travelled as X axis
 void plot_data(plot_t* plot,cairo_t* cr,float (*xaxis)(log_t*,int),float (*data)(log_t*,int),float tick_spacing,float r,float g,float b)
 {
 cairo_move_to(cr,plot->left_margin,plot->bottom_margin+plot->y_scale*data(plot->log,plot->start)/tick_spacing);

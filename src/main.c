@@ -81,7 +81,7 @@ height=gtk_widget_get_allocated_height(widget);
 gtk_render_background(context,cr,0,0,width,height);
 	if(cur_log.points>0)
 	{
-	plot_set_size(&plot,width,height);//TODO only call when necessary
+		if(width!=plot.width||height!=plot.height)plot_set_size(&plot,width,height);
 	plot_draw(&plot,cr);
 	}
 return FALSE;
@@ -179,7 +179,6 @@ void map_toggled(GtkCheckMenuItem* menu_item,gpointer data)
 {
 	if(gtk_check_menu_item_get_active(menu_item))gtk_widget_show(map_area);
 	else gtk_widget_hide(map_area);
-plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
