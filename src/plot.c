@@ -1,4 +1,5 @@
 #include<stdio.h>
+#include<stdlib.h>
 #include<math.h>
 #include "plot.h"
 
@@ -40,6 +41,31 @@ int i=0;
 return spacing_candidates[i];
 }
 
+int cmp(const void* a,const void* b)
+{
+	if(*((float*)a)<*((float*)b))return -1;
+	else if(*((float*)a)==*((float*)b))return 0;
+	else return 1;
+}
+
+
+//Select range for variables that tend to feature anomalously large values
+float select_value(log_t* log,float (*plot_function)(log_t*,int),int start,int end)
+{
+float* values=calloc(end-start+1,sizeof(float));
+	for(int i=start;i<=end;i++)
+	{
+	float t=log_get_time(log,i);
+		//Ignore first and last 5 seconds because they tend to cause spikes
+		if(t<=5.0||t>log_get_time(log,end)-5.0)continue;
+	values[i-start]=plot_function(log,i);
+	}
+//Ignore top 1% of values as outliers
+qsort(values,end-start+1,sizeof(float),cmp);
+float selected=values[(99*(end-start))/100];
+free(values);
+return selected;
+}
 
 //TODO improve this
 void plot_recalculate_range(plot_t* plot)
@@ -54,31 +80,33 @@ int y_ticks=(int)((usable_height/target)+0.5);
 //Calculate x tick spacing and data range
 plot->x_tick_spacing=calculate_tick_spacing(x_ticks,plot->x_end-plot->x_start);
 plot->x_range=(plot->x_end-plot->x_start)/plot->x_tick_spacing;
-printf("%f\n",plot->x_range);
 
 //Calculate y tick spacing and data range
 float y_ranges[5]={0,0,0,0,0};
 	for(int i=plot->start;i<plot->end;i++)
 	{
-		for(int j=0;j<PLOT_NUM;j++)
+		for(int j=0;j<PLOT_NUM-4;j++)
 		{
-		//Exclude glide ratio in range calculation if anything else is plotted; it's problematic
-			if(j==PLOT_NUM-1&&plot->active_plots!=PLOT_GR)continue;
-			if(plot->active_plots&(1<<j))y_ranges[plot_units[j]]=max(y_ranges[plot_units[j]],plot_functions[j](plot->log,i));
+			if(plot->active_plots&(1<<j))y_ranges[plot_units[j]]=max(y_ranges[plot_units[j]],fabs(plot_functions[j](plot->log,i)));
 		}
 	}
+	for(int j=PLOT_NUM-4;j<PLOT_NUM;j++)
+	{
+		if(plot->active_plots&(1<<j))y_ranges[plot_units[j]]=max(y_ranges[plot_units[j]],select_value(plot->log,plot_functions[j],plot->start,plot->end));
+	}
+
 	for(int i=0;i<5;i++)
 	{
 	plot->y_tick_spacing[i]=calculate_tick_spacing(y_ticks,y_ranges[i]);
 	}
+
+
 float y_range=0.0;
-	for(int i=plot->start;i<plot->end;i++)//TODO avoid this loop
+	for(int j=0;j<PLOT_NUM;j++)
 	{
-		for(int j=0;j<PLOT_NUM;j++)
+		if(plot->active_plots&(1<<j))
 		{
-		//Exclude glide ratio in range calculation if anything else is plotted; it's problematic
-			if(j==PLOT_NUM-1&&plot->active_plots!=PLOT_GR)continue;
-			if(plot->active_plots&(1<<j))y_range=max(y_range,plot_functions[j](plot->log,i)/plot->y_tick_spacing[plot_units[j]]);
+		y_range=max(y_range,y_ranges[plot_units[j]]/plot->y_tick_spacing[plot_units[j]]);
 		}
 	}
 
