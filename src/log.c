@@ -175,6 +175,13 @@ float log_get_altitude(log_t* log,int i)
 return log->altitude[i];
 }
 
+float log_get_density(log_t* log,int i)
+{
+float pressure=101325*pow(1-2.25569e-5*log->altitude[i],5.25616);
+float temp=288.15-0.0065*log->altitude[i];
+return 0.00348367875*pressure/temp;
+}
+
 float log_get_vel_vert(log_t* log,int i)
 {
 return log->vel_d[i];
@@ -189,6 +196,24 @@ float log_get_vel_total(log_t* log,int i)
 {
 return sqrt(log->vel_n[i]*log->vel_n[i]+log->vel_e[i]*log->vel_e[i]+log->vel_d[i]*log->vel_d[i]);
 }
+
+float log_get_ias_vert(log_t* log,int i)
+{
+return log_get_vel_vert(log,i)*sqrt(log_get_density(log,i)/1.225);
+}
+
+float log_get_ias_horz(log_t* log,int i)
+{
+return log_get_vel_horz(log,i)*sqrt(log_get_density(log,i)/1.225);
+}
+
+float log_get_ias_total(log_t* log,int i)
+{
+return log_get_vel_total(log,i)*sqrt(log_get_density(log,i)/1.225);
+}
+
+
+
 
 void log_get_acc_difference_points(log_t* log,int i,int* left,int* right)
 {
@@ -273,9 +298,7 @@ float acc_p=sqrt(an*an+ae*ae+ad*ad);
 float mass=80;
 float A=0.5;
 
-float pressure=101325*pow(1-2.25569e-5*log->altitude[i],5.25616);
-float temp=288.15-0.0065*log->altitude[i];
-float density=0.00348367875*pressure/temp;
+float density=log_get_density(log,i);
 
 *drag=-mass*acc_l/(0.5*density*A*v_mag*v_mag);
 *lift=mass*acc_p/(0.5*density*A*v_mag*v_mag);
