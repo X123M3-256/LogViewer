@@ -161,6 +161,15 @@
                       <object class="GtkCheckMenuItem">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">G Force</property>
+                        <property name="use-underline">True</property>
+                        <signal name="toggled" handler="g_force_toggled" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
                         <property name="label" translatable="yes">Lift Coefficient</property>
                         <property name="use-underline">True</property>
                         <signal name="toggled" handler="lift_coefficient_toggled" object="plot_area" swapped="no"/>

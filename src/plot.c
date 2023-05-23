@@ -8,16 +8,16 @@ float max(float a,float b)
 return a>b?a:b;
 }
 
-int unit_plots[5]={PLOT_ALTITUDE|PLOT_DISTANCE,PLOT_VEL_VERT|PLOT_VEL_HORZ|PLOT_VEL_TOTAL,PLOT_ACC_VERT|PLOT_ACC_HORZ,PLOT_TIME,PLOT_LIFT|PLOT_DRAG|PLOT_LD|PLOT_GR};
+int unit_plots[5]={PLOT_ALTITUDE|PLOT_DISTANCE,PLOT_VEL_VERT|PLOT_VEL_HORZ|PLOT_VEL_TOTAL,PLOT_ACC_VERT|PLOT_ACC_HORZ|PLOT_G_FORCE,PLOT_TIME,PLOT_LIFT|PLOT_DRAG|PLOT_LD|PLOT_GR};
 const char* units[5]={"m","m/s","m/s\u00B2","s",""};
 const char* unit_alternate[5]={"ft","mph","G",NULL,NULL};
 float unit_alternate_scale[5]={3.28084,2.236936,0.101936799185,0,0};
 
-float (*plot_functions[])(log_t*,int)={log_get_time,log_get_altitude,log_get_distance,log_get_vel_horz,log_get_vel_vert,log_get_vel_total,log_get_acc_horz,log_get_acc_vert,log_get_lift_coefficient,log_get_drag_coefficient,log_get_lift_drag_ratio,log_get_glide_ratio};
-float plot_colors[PLOT_NUM][3]={{1,1,1},{0,0,0},{0,0,0},{1,0,0},{0,1,0},{1,1,0},{1,0,1},{0.5,0.5,0},{0,0.5,0},{0.5,0,0},{0,0,1},{0,0,0.5}};
-int plot_units[PLOT_NUM]={3,0,0,1,1,1,2,2,4,4,4,4};
-const char* plot_names[PLOT_NUM]={"Time","Altitude","Distance","Horizontal Velocity","Vertical Velocity","Total Velocity","Horizontal Acceleration","Vertical Acceleration","Lift Coefficient","Drag Coefficient","L/D Ratio","Glide Ratio"};
-const char* plot_range_names[PLOT_NUM]={"Time (Difference)","Altitude (Difference)","Distance (Difference)","Horizontal Velocity (Average)","Vertical Velocity (Average)","Total Velocity (Average)","Horizontal Acceleration (Average)","Vertical Acceleration (Average)","Lift Coefficient (Average)","Drag Coefficient (Average)","L/D Ratio (Average)","Glide Ratio (Average)"};
+float (*plot_functions[])(log_t*,int)={log_get_time,log_get_altitude,log_get_distance,log_get_vel_horz,log_get_vel_vert,log_get_vel_total,log_get_acc_horz,log_get_acc_vert,log_get_g_force,log_get_lift_coefficient,log_get_drag_coefficient,log_get_lift_drag_ratio,log_get_glide_ratio};
+float plot_colors[PLOT_NUM][3]={{1,1,1},{0,0,0},{0,0,0},{1,0,0},{0,1,0},{1,1,0},{1,0,1},{0.5,0.5,0},{0,0.5,0.5},{0,0.5,0},{0.5,0,0},{0,0,1},{0,0,0.5}};
+int plot_units[PLOT_NUM]={3,0,0,1,1,1,2,2,2,4,4,4,4};
+const char* plot_names[PLOT_NUM]={"Time","Altitude","Distance","Horizontal Velocity","Vertical Velocity","Total Velocity","Horizontal Acceleration","Vertical Acceleration","G Force","Lift Coefficient","Drag Coefficient","L/D Ratio","Glide Ratio"};
+const char* plot_range_names[PLOT_NUM]={"Time (Difference)","Altitude (Difference)","Distance (Difference)","Horizontal Velocity (Average)","Vertical Velocity (Average)","Total Velocity (Average)","Horizontal Acceleration (Average)","Vertical Acceleration (Average)","G Force (Average)","Lift Coefficient (Average)","Drag Coefficient (Average)","L/D Ratio (Average)","Glide Ratio (Average)"};
 
 
 void plot_set_range(plot_t* plot,int start,int end)
@@ -442,7 +442,7 @@ draw_cursor(plot,cr,plot->cursor_x,values);
 	display_values[7]=(values[4]-values2[4])/(end_time-start_time);
 	
 	//For other quantities use the trapezium rule to compute the average
-	int averaged_quantities[]={3,4,5,8,9};	
+	int averaged_quantities[]={3,4,5,8,9,10};	
 		for(int i=0;i<5;i++)
 		{
 		int index=averaged_quantities[i];
@@ -462,8 +462,8 @@ draw_cursor(plot,cr,plot->cursor_x,values);
 			}
 		}
 	//Averages of L/D and glide ratios calculated from averaged L/D coefficients and velocities
-	display_values[10]=display_values[8]/display_values[9];	
-	display_values[11]=display_values[3]/display_values[4];	
+	display_values[11]=display_values[9]/display_values[10];	
+	display_values[12]=display_values[3]/display_values[4];	
 
 	cairo_set_source_rgba(cr,0.6,0.6,0.6,0.5);
 	cairo_rectangle(cr,plot->left_margin+plot->x_scale*(plot->cursor_x-plot->x_start)/plot->x_tick_spacing,plot->bottom_margin,plot->x_scale*plot->cursor_range/plot->x_tick_spacing,plot->height-plot->bottom_margin-plot->top_margin);

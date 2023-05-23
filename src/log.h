@@ -33,6 +33,7 @@ float log_get_vel_horz(log_t* log,int i);
 float log_get_vel_total(log_t* log,int i);
 float log_get_acc_vert(log_t* log,int i);
 float log_get_acc_horz(log_t* log,int i);
+float log_get_g_force(log_t* log,int i);
 void log_get_drag_lift_coefficient(log_t* log,int i,float* drag,float* lift);
 float log_get_lift_coefficient(log_t* log,int i);
 float log_get_drag_coefficient(log_t* log,int i);

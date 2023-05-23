@@ -163,6 +163,14 @@ plot_recalculate_range(&plot);
 gtk_widget_queue_draw(GTK_WIDGET(data));
 }
 
+void g_force_toggled(GtkCheckMenuItem* menu_item,gpointer data)
+{
+	if(gtk_check_menu_item_get_active(menu_item))plot.active_plots|=PLOT_G_FORCE;
+	else plot.active_plots&=~PLOT_G_FORCE;
+plot_recalculate_range(&plot);
+gtk_widget_queue_draw(GTK_WIDGET(data));
+}
+
 void lift_coefficient_toggled(GtkCheckMenuItem* menu_item,gpointer data)
 {
 	if(gtk_check_menu_item_get_active(menu_item))plot.active_plots|=PLOT_LIFT;
