@@ -124,7 +124,7 @@ log->deployment=-1;
 			//Similar procedure - iterate backward for point where deceleration began.
 				for(int j=5;j>0;j--)
 				{
-					while(i>log->exit&&(log->vel_d[i]-log->vel_d[i-j])/(0.01*(log->time[i]-log->time[i-j]))<-2.0)i--;
+					while(i>log->exit&&(log->vel_d[i]-log->vel_d[i-j])/(0.01*(log->time[i]-log->time[i-j]))<-1.0)i--;
 				}
 			log->deployment=i;
 			break;
