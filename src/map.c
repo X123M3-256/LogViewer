@@ -7,21 +7,21 @@ extern GtkWidget* plot_area;
 extern plot_t plot;
 extern log_t cur_log;
 
+
+map_t maps[]={
+{"lps",16384,0,-1.185079,-1.009292,51.495792,51.605093,65},
+{"langar",16384,0,-0.989810,-0.814037,52.838665,52.944716,37},
+};
+
 struct
 {
-int loaded;
-float lat_start,lat_end;
-float lon_start,lon_end;
-float elevation;
-int image_width;
-cairo_surface_t* image[5];
+int map_index;
 float cur_lat;
 float cur_lon;
-float pixels_per_meter;
 float scale;
 float rotation;
 float inclination;
-}map;
+}map_state;
 
 gboolean map_plot_motion(GtkWidget *widget,GdkEvent *event,gpointer user_data)
 {
@@ -52,6 +52,8 @@ g_object_unref(G_OBJECT(builder));
 
 
 
+
+
 cairo_surface_t* load_image(const char* file)
 {
 GdkPixbuf* pixbuf=gdk_pixbuf_new_from_file(file,NULL);
@@ -64,35 +66,51 @@ return image;
 
 int load_map()
 {
-map.image_width=16384;
-map.lon_start=-1.185079;
-map.lon_end=-1.009292;
-map.lat_start=51.495792;
-map.lat_end=51.605093;
-map.elevation=65;
-
-//TODO account for map distortion
-map.pixels_per_meter=map.image_width/get_distance(map.lat_start,map.lon_start,map.lat_end,map.lon_start);
-
-//map.image[0]=load_image("data/lps0.png");
-//	if(map.image[0]==NULL)return 1;
-//map.image[1]=load_image("data/lps1.png");
-//	if(map.image[1]==NULL)return 1;
-map.image[2]=load_image("data/lps2.png");
-	if(map.image[2]==NULL)return 1;
-map.image[3]=load_image("data/lps3.png");
-	if(map.image[3]==NULL)return 1;
-map.image[4]=load_image("data/lps4.png");
-	if(map.image[4]==NULL)return 1;
-
-map.cur_lon=0.5*(map.lon_start+map.lon_end);
-map.cur_lat=0.5*(map.lat_start+map.lat_end);
-
-map.scale=0.25;
-
+	for(int i=0;i<NUM_MAPS;i++)
+	{
+	//TODO account for map distortion
+	maps[i].pixels_per_meter=maps[i].image_width/get_distance(maps[i].lat_start,maps[i].lon_start,maps[i].lat_end,maps[i].lon_start);
+		for(int j=2;j<5;j++)
+		{
+		char str[256];
+		sprintf(str,"data/%s%d.png",maps[i].name,j);
+	printf("Loading %s\n",maps[i].name);
+		maps[i].images[j]=load_image(str);
+			if(maps[i].images[j]==NULL)return 1;
+		}
+	maps[i].loaded=1;
+	}
 
 return 0;
 }
+
+int set_map(float lon,float lat)
+{
+printf("Searching maps for location %f %f\n",lon,lat);
+map_state.map_index=-1;
+	for(int i=0;i<NUM_MAPS;i++)
+	{
+	printf("Testing map  %s\n",maps[i].name);
+	printf("Map  lon %f %f\n",maps[i].lon_start,maps[i].lon_end);
+		if(lon>maps[i].lon_start&&lon<maps[i].lon_end&&lat>maps[i].lat_start&&lat<maps[i].lat_end)
+		{
+		map_state.map_index=i;
+		break;
+		}
+	}
+	
+	if(map_state.map_index>=0)
+	{
+	map_state.scale=0.25;
+	map_state.cur_lon=0.5*(maps[map_state.map_index].lon_start+maps[map_state.map_index].lon_end);
+	map_state.cur_lat=0.5*(maps[map_state.map_index].lat_start+maps[map_state.map_index].lat_end);
+	}
+	else
+	{
+	printf("Unrecognized location; map disabled\n");
+	}
+}
+
 
 int map_drag_active=0;
 int map_drag_x;
@@ -104,17 +122,17 @@ float map_drag_inc;
 
 void map_get_coords(float lon,float lat,float elevation,float* x,float* y)
 {
-float x1=map.image_width*map.scale*(lon-map.lon_start)/(map.lon_end-map.lon_start);
-float y1=map.image_width*map.scale*(1.0-(lat-map.lat_start)/(map.lat_end-map.lat_start));
-*x=cos(map.rotation)*x1-sin(map.rotation)*y1;
-*y=cos(map.inclination)*(sin(map.rotation)*x1+cos(map.rotation)*y1)-map.pixels_per_meter*map.scale*sin(map.inclination)*(elevation-map.elevation);
-
+map_t* map=maps+map_state.map_index;
+float x1=map->image_width*map_state.scale*(lon-map->lon_start)/(map->lon_end-map->lon_start);
+float y1=map->image_width*map_state.scale*(1.0-(lat-map->lat_start)/(map->lat_end-map->lat_start));
+*x=cos(map_state.rotation)*x1-sin(map_state.rotation)*y1;
+*y=cos(map_state.inclination)*(sin(map_state.rotation)*x1+cos(map_state.rotation)*y1)-map->pixels_per_meter*map_state.scale*sin(map_state.inclination)*(elevation-map->elevation);
 }
 /*
 void map_get_lonlat(float x,float y,float* lon,float* lat)
 {
-*lon=map.lon_start+(x*(map.lon_end-map.lon_start))/5000.0;
-*lat=map.lat_start+(y*(map.lat_end-map.lat_start))/5000.0;
+*lon=map_state.lon_start+(x*(map_state.lon_end-map_state.lon_start))/5000.0;
+*lat=map_state.lat_start+(y*(map_state.lat_end-map_state.lat_start))/5000.0;
 }
 */
 
@@ -127,7 +145,7 @@ float* bottom_y=calloc(finish-start+1,sizeof(float));
 	for(int i=start;i<=finish;i++)
 	{
 	map_get_coords(cur_log.longitude[i],cur_log.latitude[i],cur_log.altitude[i],top_x+(i-start),top_y+(i-start));
-	map_get_coords(cur_log.longitude[i],cur_log.latitude[i],map.elevation,bottom_x+(i-start),bottom_y+(i-start));
+	map_get_coords(cur_log.longitude[i],cur_log.latitude[i],maps[map_state.map_index].elevation,bottom_x+(i-start),bottom_y+(i-start));
 	}
 
 cairo_set_line_width(cr,1.0);
@@ -208,6 +226,7 @@ free(bottom_y);
 
 gboolean map_draw(GtkWidget *widget,cairo_t *cr,gpointer data)
 {
+	if(map_state.map_index<0)return FALSE;
 guint width, height;
 GdkRGBA color;
 GtkStyleContext *context;
@@ -224,25 +243,25 @@ cairo_fill(cr);
 cairo_save(cr);
 cairo_translate(cr,width/2,height/2);
 float x,y;
-map_get_coords(map.cur_lon,map.cur_lat,0,&x,&y);
+map_get_coords(map_state.cur_lon,map_state.cur_lat,0,&x,&y);
 cairo_translate(cr,-x,-y);
 
 
 cairo_save(cr);
-cairo_scale(cr,map.scale,map.scale);
-cairo_scale(cr,1.0,cos(map.inclination));
-cairo_rotate(cr,map.rotation);
+cairo_scale(cr,map_state.scale,map_state.scale);
+cairo_scale(cr,1.0,cos(map_state.inclination));
+cairo_rotate(cr,map_state.rotation);
 
 
 
 int level=2;
-	if(map.scale<0.075)level=4;
-	else if(map.scale<0.15)level=3;
-	else if(map.scale<0.3)level=2;
-	//else if(map.scale<0.6)level=1;
+	if(map_state.scale<0.075)level=4;
+	else if(map_state.scale<0.15)level=3;
+	else if(map_state.scale<0.3)level=2;
+	//else if(map_state.scale<0.6)level=1;
 cairo_scale(cr,(float)(1<<level),(float)(1<<level));
 
-cairo_set_source_surface (cr,map.image[level],0,0);
+cairo_set_source_surface (cr,maps[map_state.map_index].images[level],0,0);
 cairo_paint(cr);
 cairo_restore(cr);
 
@@ -321,8 +340,8 @@ cairo_arc(cr,0,0,compass_inner_radius,0,2*M_PI);
 cairo_stroke(cr);
 	for(int i=0;i<36;i++)
 	{
-	float dir_x=sin(-map.rotation+M_PI*i/18.0);	
-	float dir_y=cos(-map.rotation+M_PI*i/18.0);
+	float dir_x=sin(-map_state.rotation+M_PI*i/18.0);	
+	float dir_y=cos(-map_state.rotation+M_PI*i/18.0);
 	cairo_move_to(cr,compass_inner_radius*dir_x,compass_inner_radius*dir_y);
 		if(i&1)cairo_line_to(cr,(compass_inner_radius+compass_tick_length)*dir_x,(compass_inner_radius+compass_tick_length)*dir_y);
 		else cairo_line_to(cr,compass_radius*dir_x,compass_radius*dir_y);
@@ -334,7 +353,7 @@ const char* labels[]={"N","E","S","W"};
 	for(int i=0;i<4;i++)
 	{
 	cairo_save(cr);
-	cairo_rotate(cr,map.rotation+0.5*i*M_PI);
+	cairo_rotate(cr,map_state.rotation+0.5*i*M_PI);
 	cairo_text_extents_t extents;
 	cairo_text_extents(cr,labels[i],&extents);
 	cairo_move_to(cr,-extents.x_bearing-extents.width/2,-20);
@@ -371,7 +390,7 @@ cairo_show_text(cr,str);
 
 cairo_translate(cr,110,75);
 cairo_set_source_rgba(cr,1.0,0.5,0.0,1);
-cairo_rotate(cr,map.rotation+bearing);
+cairo_rotate(cr,map_state.rotation+bearing);
 float wind_scale=3.0;
 cairo_move_to(cr,0,-wind_scale*wind);
 cairo_line_to(cr,0,wind_scale*wind);
@@ -397,14 +416,14 @@ map_drag_y=event->button.y;
 	if(event->button.button==1)
 	{
 	map_drag_active=1;
-	map_drag_lon=map.cur_lon;
-	map_drag_lat=map.cur_lat;
+	map_drag_lon=map_state.cur_lon;
+	map_drag_lat=map_state.cur_lat;
 	}
 	if(event->button.button==3)
 	{
 	map_drag_active=2;
-	map_drag_rot=map.rotation;
-	map_drag_inc=map.inclination;
+	map_drag_rot=map_state.rotation;
+	map_drag_inc=map_state.inclination;
 	}
 gtk_widget_queue_draw(GTK_WIDGET(widget));
 }
@@ -419,26 +438,27 @@ gboolean map_motion(GtkWidget *widget,GdkEvent *event,gpointer user_data)
 {
 	if(map_drag_active==1)
 	{
+	map_t* map=maps+map_state.map_index;
 	int x_motion=(event->motion.x-map_drag_x);
-	int y_motion=(event->motion.y-map_drag_y)/cos(map.inclination);
-	map.cur_lon=map_drag_lon-((cos(map.rotation)*x_motion+sin(map.rotation)*y_motion)*(map.lon_end-map.lon_start))/(map.scale*map.image_width);
-	map.cur_lat=map_drag_lat+((-sin(map.rotation)*x_motion+cos(map.rotation)*y_motion)*(map.lat_end-map.lat_start))/(map.scale*map.image_width);
+	int y_motion=(event->motion.y-map_drag_y)/cos(map_state.inclination);
+	map_state.cur_lon=map_drag_lon-((cos(map_state.rotation)*x_motion+sin(map_state.rotation)*y_motion)*(map->lon_end-map->lon_start))/(map_state.scale*map->image_width);
+	map_state.cur_lat=map_drag_lat+((-sin(map_state.rotation)*x_motion+cos(map_state.rotation)*y_motion)*(map->lat_end-map->lat_start))/(map_state.scale*map->image_width);
 	gtk_widget_queue_draw(GTK_WIDGET(widget));
 	}
 	else if(map_drag_active==2)
 	{
-	map.rotation=map_drag_rot+0.005*(event->motion.x-map_drag_x);
-	map.inclination=map_drag_inc+0.005*(event->motion.y-map_drag_y);
-		if(map.inclination<0)map.inclination=0;
-		else if(map.inclination>0.475*M_PI)map.inclination=0.475*M_PI;
+	map_state.rotation=map_drag_rot+0.005*(event->motion.x-map_drag_x);
+	map_state.inclination=map_drag_inc+0.005*(event->motion.y-map_drag_y);
+		if(map_state.inclination<0)map_state.inclination=0;
+		else if(map_state.inclination>0.475*M_PI)map_state.inclination=0.475*M_PI;
 	gtk_widget_queue_draw(GTK_WIDGET(widget));
 	}
 }
 
 gboolean map_scroll(GtkWidget *widget,GdkEvent *event,gpointer user_data)
 {
-	if(event->scroll.direction==GDK_SCROLL_UP&&map.scale<0.9)map.scale*=2.0;
-	else if(event->scroll.direction==GDK_SCROLL_DOWN)map.scale*=0.5;
+	if(event->scroll.direction==GDK_SCROLL_UP&&map_state.scale<0.9)map_state.scale*=2.0;
+	else if(event->scroll.direction==GDK_SCROLL_DOWN)map_state.scale*=0.5;
 gtk_widget_queue_draw(GTK_WIDGET(widget));
 return TRUE;  
 }

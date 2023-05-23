@@ -28,6 +28,8 @@ plot_new(&plot,&cur_log);
 polar_init();
 wind_init();
 load_data(filename);
+
+set_map(cur_log.longitude[cur_log.points-1],cur_log.latitude[cur_log.points-1]);
 return 0;
 }
 
